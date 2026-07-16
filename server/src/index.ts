@@ -5,7 +5,7 @@ const port = parseInt(process.env.PORT || '5050');
 const host = '0.0.0.0';
 const allowedOrigins = new Set([
   'http://localhost:5173',
-  'https://mail.getaipilot.in',
+  'https://mail.getaipilot.online',
 ]);
 
 const fastify = Fastify({
