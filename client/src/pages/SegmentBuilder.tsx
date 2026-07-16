@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Mail, CheckCircle2, Search, RefreshCw, AlertTriangle, ShieldCheck, Users, CheckSquare, Square, Settings, ExternalLink, X, Activity } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -11,7 +11,6 @@ interface SegmentBuilderProps {
 type SegmentFilterMode = 'all' | 'pending_onboarding' | 'unverified' | 'completed_onboarding';
 
 export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
-  campaigns,
   templates,
   onLaunchCampaign,
 }) => {
@@ -21,7 +20,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   // GetAIPilot users state
   const [getAIPilotUsers, setGetAIPilotUsers] = useState<GetAIPilotUser[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [, setIsLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<SegmentFilterMode>('all');
   const [selectedEmails, setSelectedEmails] = useState<Record<string, boolean>>({});
@@ -29,7 +28,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [broadcastSuccessMessage, setBroadcastSuccessMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [providerUsed, setProviderUsed] = useState<string | null>(null);
-  const [jobStats, setJobStats] = useState<any | null>(null);
+  const [, setJobStats] = useState<any | null>(null);
   const [customTestEmail, setCustomTestEmail] = useState('');
 
   const handleAddCustomEmail = (e: React.FormEvent) => {
@@ -127,22 +126,6 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   const deselectAll = () => {
     setSelectedEmails({});
-  };
-
-  const selectOnlyPendingOnboarding = () => {
-    const next: Record<string, boolean> = {};
-    getAIPilotUsers.forEach(u => {
-      if (u.onboarding_completed === false) next[u.email] = true;
-    });
-    setSelectedEmails(next);
-  };
-
-  const selectOnlyUnverified = () => {
-    const next: Record<string, boolean> = {};
-    getAIPilotUsers.forEach(u => {
-      if (u.is_verified === false) next[u.email] = true;
-    });
-    setSelectedEmails(next);
   };
 
   const handleLaunch = async (e: React.FormEvent) => {

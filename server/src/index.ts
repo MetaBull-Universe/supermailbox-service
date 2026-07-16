@@ -3,6 +3,10 @@ import cors from '@fastify/cors';
 
 const port = parseInt(process.env.PORT || '5050');
 const host = '0.0.0.0';
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'https://mail.getaipilot.in',
+]);
 
 const fastify = Fastify({
   logger: {
@@ -18,10 +22,23 @@ import { initCampaignWorker } from './workers/campaignWorker.js';
 
 // Register CORS
 await fastify.register(cors, {
-  origin: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin'],
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS origin not allowed: ${origin}`), false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
+  optionsSuccessStatus: 204,
 });
 
 await registerEmailRoutes(fastify);
