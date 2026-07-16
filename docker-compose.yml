@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: supermailbox-redis
+    ports:
+      - "6379:6379"
+    restart: always
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: supermailbox-redisinsight
+    ports:
+      - "5540:5540"
+    restart: always
+    volumes:
+      - redisinsight_data:/db
+
+volumes:
+  redis_data:
+  redisinsight_data:
