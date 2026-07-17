@@ -20,7 +20,9 @@ export const redisConnection = redisUrl ? new Redis(redisUrl, {
 
 // Avoid crashing server if local Redis is disconnected during dev
 redisConnection.on('error', (err: any) => {
-  // Silent or low-noise log in dev
+  if (err.code === 'ECONNREFUSED') {
+    console.warn('⚠️  [Redis] Connection refused. (If testing locally without Redis, this is expected).');
+  }
 });
 
 export const campaignQueue = new Queue<CampaignJobPayload>('campaign-email-queue', {

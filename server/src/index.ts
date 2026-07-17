@@ -51,8 +51,13 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { FastifyAdapter } from '@bull-board/fastify';
 import { campaignQueue, transactionalQueue } from './queues/campaignQueue.js';
 
-// Start background campaign worker
-initCampaignWorker();
+// Initialize worker if Redis is alive
+try {
+  await campaignQueue.client.ping();
+  initCampaignWorker();
+} catch (e) {
+  fastify.log.warn('⚠️  [Local Dev] Redis is offline. Background workers and queues are disabled. Start Redis locally or use a cloud Redis URL to test email sending.');
+}
 
 // Register interactive Bull-Board GUI on /admin/queues
 const serverAdapter = new FastifyAdapter();
