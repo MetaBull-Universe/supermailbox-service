@@ -6,8 +6,12 @@ const Redis = (IORedis as any).default || IORedis;
 
 const redisHost = process.env.REDIS_HOST || '127.0.0.1';
 const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+const redisUrl = process.env.REDIS_URL;
 
-export const redisConnection = new Redis({
+export const redisConnection = redisUrl ? new Redis(redisUrl, {
+  maxRetriesPerRequest: null,
+  lazyConnect: true
+}) : new Redis({
   host: redisHost,
   port: redisPort,
   maxRetriesPerRequest: null,
