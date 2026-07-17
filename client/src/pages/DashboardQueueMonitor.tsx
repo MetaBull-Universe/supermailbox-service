@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, AlertTriangle, Eye, Search, ChevronLeft, ChevronRight, X, Terminal, Activity, Layers, Zap } from 'lucide-react';
+import { Send, AlertTriangle, Eye, Search, X, Activity } from 'lucide-react';
 import type { MetricCardData, QueueJob, ActivityLog } from '../services/api';
 
 interface DashboardProps {
@@ -11,9 +11,7 @@ interface DashboardProps {
 
 export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
   metrics,
-  jobs,
   logs,
-  onRefresh,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);

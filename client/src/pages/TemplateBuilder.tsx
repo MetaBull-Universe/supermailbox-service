@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Layout, Code, Monitor, Smartphone, Save, Check, FileCode, Plus, X, Layers, Maximize2 } from 'lucide-react';
+import { Sparkles, Layout, Code, Monitor, Smartphone, Save, Check, Plus, X, Layers } from 'lucide-react';
 import type { Template } from '../services/api';
 
 interface TemplateBuilderProps {
@@ -52,7 +52,7 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newTmplName, setNewTmplName] = useState<string>('');
   const [newTmplKey, setNewTmplKey] = useState<string>('');
-  const [newTmplCategory, setNewTmplCategory] = useState<string>('transactional');
+  const [newTmplCategory] = useState<string>('transactional');
 
   // Light Theme Compiled HTML
   const generateCompiledHtml = () => {
