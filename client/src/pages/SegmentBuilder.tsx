@@ -69,7 +69,9 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   const fetchMailerConfig = async () => {
     try {
-      const res = await fetch('http://localhost:5050/v1/mailer/config');
+      // We should ideally use the api.ts service here, but falling back to VITE_API_URL directly
+      const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
+      const res = await fetch(`${baseUrl}/mailer/config`);
       if (res.ok) {
         const data = await res.json();
         if (data?.config) {
@@ -199,7 +201,8 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const handleSaveMailerConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetch('http://localhost:5050/v1/mailer/config', {
+      const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
+      await fetch(`${baseUrl}/mailer/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
