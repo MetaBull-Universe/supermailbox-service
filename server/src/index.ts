@@ -53,7 +53,8 @@ import { campaignQueue, transactionalQueue } from './queues/campaignQueue.js';
 
 // Initialize worker if Redis is alive
 try {
-  await campaignQueue.client.ping();
+  const campaignClient = await campaignQueue.client;
+  await (campaignClient as any).ping();
   initCampaignWorker();
 } catch (e) {
   fastify.log.warn('⚠️  [Local Dev] Redis is offline. Background workers and queues are disabled. Start Redis locally or use a cloud Redis URL to test email sending.');

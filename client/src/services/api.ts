@@ -158,6 +158,19 @@ export class ApiService {
     return [];
   }
 
+  static async getProjectLogs(): Promise<Record<string, ActivityLog[]>> {
+    try {
+      const res = await fetch(`${API_BASE}/logs/by-project`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.projects) return data.projects;
+      }
+    } catch (err) {
+      console.warn('API getProjectLogs failed:', err);
+    }
+    return {};
+  }
+
   static async getTemplates(): Promise<Template[]> {
     try {
       const res = await fetch(`${API_BASE}/templates`);

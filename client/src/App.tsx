@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, type TabType } from './components/Sidebar';
 import { DashboardQueueMonitor } from './pages/DashboardQueueMonitor';
+import { ProjectLogsViewer } from './pages/ProjectLogsViewer';
 import { TemplateBuilder } from './pages/TemplateBuilder';
 import { SegmentBuilder } from './pages/SegmentBuilder';
 import { SuppressionManager } from './pages/SuppressionManager';
@@ -119,6 +120,8 @@ export const App: React.FC = () => {
     switch (tab) {
       case 'dashboard':
         return 'Queue Monitor & Dashboard';
+      case 'project_logs':
+        return 'Project-wise Email Logs';
       case 'templates':
         return 'Template Builder & MJML Inspector';
       case 'campaigns':
@@ -129,7 +132,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: 'var(--bg-app)', color: 'var(--text-main)', overflow: 'hidden' }}>
+    <div className="app-shell">
       {/* Collapsible Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -139,37 +142,25 @@ export const App: React.FC = () => {
       />
 
       {/* Main Workspace Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-app)' }}>
+      <div className="app-workspace">
         {/* Sleek Light Header */}
-        <header
-          style={{
-            height: '72px',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 32px',
-            background: 'var(--bg-surface)',
-            flexShrink: 0
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <h1 style={{ fontSize: '1.18rem', fontWeight: 700, margin: 0, color: 'var(--neutral)', letterSpacing: '-0.02em' }}>
+        <header className="app-topbar">
+          <div className="app-title-block">
+            <span>SupermailBox console</span>
+            <h1>
               {getTabTitle(activeTab)}
             </h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span
-              className="badge-pill badge-success"
-              style={{ padding: '5px 14px', fontSize: '0.78rem' }}
-            >
-              &#9679; Telemetry Online
+          <div className="app-topbar-actions">
+            <span className="app-live-badge">
+              <b />
+              Telemetry Online
             </span>
           </div>
         </header>
 
         {/* Dynamic Screen Viewport */}
-        <main style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
+        <main className="app-main">
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
               <div className="spin-loader" style={{ width: '40px', height: '40px' }} />
@@ -184,6 +175,9 @@ export const App: React.FC = () => {
                   logs={logs}
                   onRefresh={loadData}
                 />
+              )}
+              {activeTab === 'project_logs' && (
+                <ProjectLogsViewer />
               )}
               {activeTab === 'templates' && (
                 <TemplateBuilder
