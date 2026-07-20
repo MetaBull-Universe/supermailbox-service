@@ -277,26 +277,20 @@ ${footerHtml}
   };
 
   return (
-    <div style={{ position: 'relative', height: 'calc(100vh - 40px)', background: '#fafafa', margin: '-20px', overflow: 'hidden', display: 'flex' }}>
+    <div className="template-workshop">
       
       {/* Background Dotted Canvas */}
-      <div style={{
+      <div className="template-grid-bg" style={{
         position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-        backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        opacity: 0.6
       }} />
 
       {/* LEFT FLOATING PROPERTIES PANEL */}
-      <div style={{
+      <div className="template-tools-panel" style={{
         position: 'relative',
         zIndex: 10,
         width: '380px',
-        background: '#ffffff',
-        borderRight: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.03)'
       }}>
         
         {/* Template Selector Header */}
@@ -402,17 +396,13 @@ ${footerHtml}
       </div>
 
       {/* CENTER STAGE (CANVAS) */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, overflowY: 'auto', padding: '40px 20px 100px 20px' }}>
+      <div className="template-preview-stage">
         
         {/* The Device/Browser Frame */}
-        <div style={{
+        <div className="template-device-frame" style={{
           width: previewMode === 'desktop' ? '680px' : '375px',
-          background: '#ffffff',
           borderRadius: previewMode === 'desktop' ? '12px' : '36px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-          overflow: 'hidden',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s ease',
-          border: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -443,19 +433,14 @@ ${footerHtml}
       </div>
 
       {/* FLOATING ACTION BAR (Bottom Center) */}
-      <div style={{
+      <div className="template-action-bar" style={{
         position: 'absolute',
         bottom: '30px',
         left: 'calc(50% + 190px)', // Offset by half the sidebar width
         transform: 'translateX(-50%)',
-        background: '#ffffff',
-        border: '1px solid var(--border-color)',
-        borderRadius: '999px',
-        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
-        boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.05)',
         zIndex: 20
       }}>
         <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-subsurface)', padding: '4px', borderRadius: '999px' }}>

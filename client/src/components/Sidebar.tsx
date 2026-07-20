@@ -1,7 +1,7 @@
 import React from 'react';
-import { Activity, FileCode, Users, ShieldAlert, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Activity, FileCode, Users, ShieldAlert, ChevronLeft, ChevronRight, User, Layers } from 'lucide-react';
 
-export type TabType = 'dashboard' | 'templates' | 'campaigns' | 'contacts';
+export type TabType = 'dashboard' | 'project_logs' | 'templates' | 'campaigns' | 'contacts';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -23,6 +23,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Activity,
     },
     {
+      id: 'project_logs' as TabType,
+      label: 'Project Logs',
+      icon: Layers,
+    },
+    {
       id: 'templates' as TabType,
       label: 'Templates',
       icon: FileCode,
@@ -41,10 +46,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      className="sidebar-shell"
       style={{
         width: collapsed ? '72px' : '240px',
-        background: 'var(--bg-app)',
-        borderRight: '1px solid var(--border-color)',
         transition: 'width 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
@@ -58,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div>
         {/* Brand */}
         <div 
+          className="sidebar-brand"
           style={{ 
             height: '64px', 
             display: 'flex', 
@@ -68,11 +73,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
             <div 
+              className="sidebar-logo"
               style={{ 
                 width: '32px', 
                 height: '32px', 
-                borderRadius: '8px', 
-                background: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -87,6 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!collapsed && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>SupermailBox</span>
+                <span className="sidebar-brand-subtitle">Delivery control</span>
               </div>
             )}
           </div>
@@ -101,34 +106,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onSelectTab(item.id)}
+                  className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: collapsed ? 'center' : 'flex-start',
-                    padding: '10px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    background: isActive ? 'var(--bg-surface)' : 'transparent',
-                    color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
-                    border: '1px solid transparent',
-                    borderColor: isActive ? 'var(--border-color)' : 'transparent',
-                    boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
                     textAlign: 'left',
                     width: '100%',
                     gap: '12px'
                   }}
                   title={collapsed ? item.label : undefined}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'var(--bg-surface)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
                 >
                   <Icon size={18} color={isActive ? 'var(--text-main)' : 'var(--text-muted)'} />
                   {!collapsed && (
@@ -147,17 +134,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {!collapsed && (
           <div
+            className="sidebar-user"
             style={{
               padding: '10px 12px',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
               borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease'
+              cursor: 'pointer'
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
             <div
               style={{
@@ -197,12 +182,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             background: 'transparent',
             border: 'none',
             color: 'var(--text-muted)',
-            cursor: 'pointer',
-            borderRadius: 'var(--radius-md)',
-            transition: 'background 0.15s ease'
+            cursor: 'pointer'
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          className="sidebar-collapse"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}

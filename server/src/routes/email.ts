@@ -351,17 +351,79 @@ export async function registerEmailRoutes(fastify: FastifyInstance) {
     }
 
     // Enqueue into BullMQ with High Priority (Priority 1)
+    const resolvedProductCode = productCode || variables?.productCode || 'socialpilot';
+    const finalIdempotencyKey = idempotencyKey || `[${resolvedProductCode}]_${to}_${Date.now()}`;
+    let dbEmailJobId = finalIdempotencyKey;
     let jobId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    try {
+      const { data: existingJob } = await supabase
+        .from('email_jobs')
+        .select('id, status')
+        .eq('idempotency_key', finalIdempotencyKey)
+        .maybeSingle();
+
+      if (existingJob?.id) {
+        return reply.status(202).send({
+          success: true,
+          jobId: existingJob.id,
+          queued: false,
+          duplicate: true,
+          status: existingJob.status,
+          message: 'Transactional email was already accepted for this idempotencyKey.'
+        });
+      }
+
+      const { data: jobRow, error: jobInsertError } = await supabase
+        .from('email_jobs')
+        .insert({
+          type: 'transactional',
+          idempotency_key: finalIdempotencyKey,
+          status: 'queued'
+        })
+        .select('id')
+        .single();
+
+      if (jobInsertError) {
+        throw jobInsertError;
+      }
+        
+      if (jobRow?.id) {
+        dbEmailJobId = jobRow.id;
+      }
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        const { data: existingJob } = await supabase
+          .from('email_jobs')
+          .select('id, status')
+          .eq('idempotency_key', finalIdempotencyKey)
+          .maybeSingle();
+
+        if (existingJob?.id) {
+          return reply.status(202).send({
+            success: true,
+            jobId: existingJob.id,
+            queued: false,
+            duplicate: true,
+            status: existingJob.status,
+            message: 'Transactional email was already accepted for this idempotencyKey.'
+          });
+        }
+      }
+
+      fastify.log.warn(`[Transactional Engine] DB Insert Warning for ${finalIdempotencyKey}: ${err?.message || err}`);
+    }
+
     let queuedToBullMQ = false;
 
     try {
       jobId = await enqueueTransactionalJob({
-        emailJobId: idempotencyKey || jobId,
+        emailJobId: dbEmailJobId,
         campaignId: 'tx_instant',
         recipientEmail: to,
         recipientName: variables?.full_name || variables?.userName || to.split('@')[0],
         templateKey: templateKey || 'transactional_default',
-        productCode: productCode || variables?.productCode || 'socialpilot',
+        productCode: resolvedProductCode,
         variables: variables || {}
       });
       queuedToBullMQ = true;

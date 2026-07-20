@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, AlertTriangle, Eye, Search, X, Activity } from 'lucide-react';
+import { Send, AlertTriangle, Eye, Search, X, Activity, RadioTower } from 'lucide-react';
 import type { MetricCardData, QueueJob, ActivityLog } from '../services/api';
 
 interface DashboardProps {
@@ -30,17 +30,22 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
   // Queue Status section temporarily removed
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+    <div className="screen-page dashboard-screen fade-in">
+      <div className="screen-hero">
+        <div>
+          <span className="screen-kicker"><RadioTower size={14} /> Live delivery telemetry</span>
+          <h2>Queue Overview</h2>
+          <p>Monitor delivery volume, health signals, and the latest dispatch activity across the SuperMailBox pipeline.</p>
+        </div>
+      </div>
+
       {/* Overview Bento Box */}
       <div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-          Overview
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="dashboard-metrics-grid">
           {metrics.map((m, i) => (
-            <div key={i} className="metric-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div key={i} className="dashboard-metric">
+              <div className="dashboard-metric-top">
+                <span>
                   {m.title}
                 </span>
                 {i === 0 && <Activity size={16} color="var(--secondary)" />}
@@ -48,10 +53,10 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                 {i === 2 && <AlertTriangle size={16} color="var(--error)" />}
                 {i === 3 && <Eye size={16} color="var(--tertiary)" />}
               </div>
-              <div style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.03em' }}>
+              <div className="dashboard-metric-value">
                 {m.value}
               </div>
-              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              <div className="dashboard-metric-subtitle">
                 {m.subtitle}
               </div>
             </div>
@@ -60,12 +65,13 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
       </div>
 
       {/* Dense Logs Table */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-            Dispatch Logs
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '6px 12px', background: 'var(--bg-surface)' }}>
+      <div className="screen-panel">
+        <div className="dashboard-table-header">
+          <div>
+            <span>Recent activity</span>
+            <h2>Dispatch Logs</h2>
+          </div>
+          <div className="search-shell">
             <Search size={14} color="var(--text-muted)" />
             <input
               type="text"
@@ -75,19 +81,11 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: 'var(--text-main)',
-                fontSize: '0.8125rem',
-                width: '200px'
-              }}
             />
           </div>
         </div>
 
-        <div className="glass-panel" style={{ overflow: 'hidden' }}>
+        <div style={{ overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -133,7 +131,7 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
             </tbody>
           </table>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-subsurface)', borderTop: '1px solid var(--border-color)' }}>
+          <div className="dashboard-pagination">
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               Page {currentPage} of {totalPages}
             </span>

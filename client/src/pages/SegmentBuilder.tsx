@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -68,7 +68,9 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   const fetchMailerConfig = async () => {
     try {
-      const res = await fetch('http://localhost:5050/v1/mailer/config');
+      // We should ideally use the api.ts service here, but falling back to VITE_API_URL directly
+      const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
+      const res = await fetch(`${baseUrl}/mailer/config`);
       if (res.ok) {
         const data = await res.json();
         if (data?.config) {
@@ -182,7 +184,8 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const handleSaveMailerConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetch('http://localhost:5050/v1/mailer/config', {
+      const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
+      await fetch(`${baseUrl}/mailer/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,13 +206,14 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   };
 
   return (
-    <div style={{ width: '100%', padding: '0 24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div className="screen-page campaign-screen fade-in">
+      <div className="screen-hero">
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <span className="screen-kicker"><UsersRound size={14} /> Audience launchpad</span>
+          <h2>
             Campaigns & Segments
           </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Configure audience segments and launch email blasts.</p>
+          <p>Build precise audiences from your synced user list and launch queued email campaigns through SuperMailBox.</p>
         </div>
         <button onClick={() => setShowSettingsModal(true)} className="btn-secondary">
           <Settings size={16} /> SMTP Config
@@ -242,52 +246,47 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
       )}
 
       {/* TWO COLUMN LAYOUT */}
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+      <div className="campaign-layout">
         
         {/* LEFT COLUMN: Configuration */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
+        <div className="campaign-left">
           
-          <div className="glass-panel" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '16px' }}>Target Audience</h3>
+          <div className="screen-panel campaign-panel">
+            <div className="campaign-panel-title">
+              <span>Segment controls</span>
+              <h3>Target Audience</h3>
+            </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div className="campaign-segment-grid">
               {[
                 { label: 'All Users', count: totalCount, mode: 'all' },
                 { label: 'Pending Onboarding', count: pendingOnboardingCount, mode: 'pending_onboarding' },
                 { label: 'Unverified', count: unverifiedCount, mode: 'unverified' },
                 { label: 'Completed', count: completedOnboardingCount, mode: 'completed_onboarding' },
               ].map(segment => (
-                <div
+                <button
                   key={segment.mode}
                   onClick={() => setFilterMode(segment.mode as SegmentFilterMode)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: filterMode === segment.mode ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: filterMode === segment.mode ? 'var(--primary-light)' : 'var(--bg-app)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
+                  className={`campaign-segment-card ${filterMode === segment.mode ? 'active' : ''}`}
                 >
-                  <div style={{ fontSize: '0.75rem', color: filterMode === segment.mode ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 500, marginBottom: '4px' }}>{segment.label}</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-main)' }}>{segment.count}</div>
-                </div>
+                  <span>{segment.label}</span>
+                  <strong>{segment.count}</strong>
+                </button>
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div className="campaign-toolbar">
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={selectVisible} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Select Visible</button>
                 <button onClick={deselectAll} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Clear All</button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '4px 10px', background: 'var(--bg-app)' }}>
+              <div className="search-shell">
                 <Search size={14} color="var(--text-muted)" />
                 <input
                   type="text"
                   placeholder="Search users..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', fontSize: '0.8125rem', width: '160px' }}
                 />
               </div>
             </div>
@@ -350,10 +349,13 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Sticky Summary */}
-        <div style={{ width: '400px', flexShrink: 0, position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="campaign-summary">
           
-          <div className="glass-panel" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '16px' }}>Campaign Details</h3>
+          <div className="screen-panel" style={{ padding: '24px' }}>
+            <div className="campaign-panel-title compact">
+              <span>Launch setup</span>
+              <h3>Campaign Details</h3>
+            </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>

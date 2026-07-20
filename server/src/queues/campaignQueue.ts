@@ -6,8 +6,12 @@ const Redis = (IORedis as any).default || IORedis;
 
 const redisHost = process.env.REDIS_HOST || '127.0.0.1';
 const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+const redisUrl = process.env.REDIS_URL;
 
-export const redisConnection = new Redis({
+export const redisConnection = redisUrl ? new Redis(redisUrl, {
+  maxRetriesPerRequest: null,
+  lazyConnect: true
+}) : new Redis({
   host: redisHost,
   port: redisPort,
   maxRetriesPerRequest: null,
@@ -16,7 +20,9 @@ export const redisConnection = new Redis({
 
 // Avoid crashing server if local Redis is disconnected during dev
 redisConnection.on('error', (err: any) => {
-  // Silent or low-noise log in dev
+  if (err.code === 'ECONNREFUSED') {
+    console.warn('⚠️  [Redis] Connection refused. (If testing locally without Redis, this is expected).');
+  }
 });
 
 export const campaignQueue = new Queue<CampaignJobPayload>('campaign-email-queue', {

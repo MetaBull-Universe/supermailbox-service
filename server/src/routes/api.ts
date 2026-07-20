@@ -48,7 +48,7 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({ success: false, error: err.message });
     }
   });
-
+    
   fastify.post('/v1/templates', async (request: FastifyRequest<{ Body: any }>, reply) => {
     try {
       const { key, name, category, html, subject } = request.body as any;
@@ -223,6 +223,75 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
       })));
 
       return reply.send({ success: true, metrics, logs, queueJobs });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  // ==========================
+  // LOGS BY PROJECT
+  // ==========================
+  fastify.get('/v1/logs/by-project', async (_request, reply) => {
+    try {
+      const { data: dbJobs, error } = await supabase
+        .from('email_jobs')
+        .select(`
+          id, type, provider, status, created_at, idempotency_key, attempts,
+          campaigns ( product_id, products ( code ) ),
+          contacts ( primary_email )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      const grouped: Record<string, any[]> = {
+        'GAP_WHATSAPP': [],
+        'socialpilot': []
+      };
+
+      (dbJobs || []).forEach((j: any) => {
+        let projectCode = 'unknown';
+        let extractedEmail = 'unknown@recipient.com';
+        
+        // Extract email
+        if (j.contacts?.primary_email) {
+          extractedEmail = j.contacts.primary_email;
+        } else if (j.idempotency_key) {
+          const parts = j.idempotency_key.split('_');
+          const emailPart = parts.find((p: string) => p.includes('@'));
+          if (emailPart) extractedEmail = emailPart;
+        }
+
+        // Extract project code
+        if (j.campaigns?.products?.code) {
+          projectCode = j.campaigns.products.code;
+        } else if (j.idempotency_key && j.idempotency_key.startsWith('[')) {
+          const closingIdx = j.idempotency_key.indexOf(']');
+          if (closingIdx > -1) {
+            projectCode = j.idempotency_key.substring(1, closingIdx);
+          }
+        }
+
+        if (projectCode === 'unknown') return; // Skip unknown legacy logs
+
+        if (!grouped[projectCode]) {
+          grouped[projectCode] = [];
+        }
+
+        grouped[projectCode].push({
+          id: j.id,
+          timestamp: j.created_at,
+          recipient: extractedEmail,
+          type: j.type === 'campaign' ? 'Campaign' : 'Transactional',
+          provider: j.provider || 'ZeptoMail',
+          status: j.status === 'delivered' ? 'Delivered' : (j.status === 'failed' ? 'Failed' : (j.status === 'sent' ? 'Sent' : 'Queued')),
+          attempts: j.attempts
+        });
+      });
+
+      return reply.send({ success: true, projects: grouped });
     } catch (err: any) {
       fastify.log.error(err);
       return reply.status(500).send({ success: false, error: err.message });

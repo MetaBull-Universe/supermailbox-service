@@ -25,9 +25,17 @@ export async function verifyApiKeyAuth(
   }
 
   // Fallback to check ADMIN_API_KEY for local dashboard requests or dev mode
-  const adminSecret = process.env.ADMIN_API_KEY || 'supermailbox-secret-key-12345';
-  if (rawToken === adminSecret || rawToken === 'supermailbox-secret-key-12345' || !rawToken) {
+  const adminSecret = process.env.ADMIN_API_KEY;
+  if (rawToken && adminSecret && rawToken === adminSecret) {
     return true;
+  }
+
+  if (!rawToken) {
+    reply.status(401).send({
+      success: false,
+      error: 'Missing API key.'
+    });
+    return false;
   }
 
   // Hash incoming token and query api_keys table

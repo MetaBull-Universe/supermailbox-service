@@ -103,7 +103,7 @@ export interface CampaignJobStats {
   suppressed: number;
 }
 
-const API_BASE = 'http://localhost:5050/v1';
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
 
 export class ApiService {
   static async getCampaignJobStats(campaignId: string): Promise<CampaignJobStats> {
@@ -156,6 +156,19 @@ export class ApiService {
       console.warn('API getActivityLogs failed:', err);
     }
     return [];
+  }
+
+  static async getProjectLogs(): Promise<Record<string, ActivityLog[]>> {
+    try {
+      const res = await fetch(`${API_BASE}/logs/by-project`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.projects) return data.projects;
+      }
+    } catch (err) {
+      console.warn('API getProjectLogs failed:', err);
+    }
+    return {};
   }
 
   static async getTemplates(): Promise<Template[]> {

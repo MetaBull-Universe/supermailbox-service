@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, AlertCircle, Search } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Search, ShieldAlert } from 'lucide-react';
 import type { SuppressionItem } from '../services/api';
 
 interface SuppressionProps {
@@ -29,14 +29,15 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
   const filtered = suppressions.filter(s => s.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="screen-page suppression-screen fade-in">
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="screen-hero suppression-hero">
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          <span className="screen-kicker"><ShieldAlert size={14} /> Reputation guardrail</span>
+          <h2>
             Suppression List
           </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+          <p>
             Manage blocked contacts, hard bounces, and spam complaints.
           </p>
         </div>
@@ -46,20 +47,19 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
         </button>
       </div>
 
-      <div className="glass-panel" style={{ overflow: 'hidden' }}>
+      <div className="screen-panel">
         
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-subsurface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '6px 12px', width: '280px' }}>
+        <div className="suppression-toolbar">
+          <div className="search-shell">
             <Search size={14} color="var(--text-muted)" />
             <input
               type="text"
               placeholder="Search blocked emails..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8125rem', width: '100%', color: 'var(--text-main)' }}
             />
           </div>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+          <span className="suppression-count">
             {filtered.length} entries found
           </span>
         </div>
