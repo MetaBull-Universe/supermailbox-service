@@ -1,9 +1,51 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { supabase } from '../supabase.js';
 import { campaignQueue, transactionalQueue } from '../queues/campaignQueue.js';
+import { addResponsiveEmailFixes } from '../services/responsiveEmail.js';
+import { fetchGetAiPilotUsers } from '../services/getaipilotUsers.js';
+
+const normalizeProjectCode = (value?: string | null) => {
+  if (!value) return 'unknown';
+  const normalized = value.trim();
+  if (!normalized) return 'unknown';
+  if (normalized.toLowerCase() === 'socialpilot') return 'socialpilot';
+  return normalized;
+};
+
+const extractEmailFromIdempotencyKey = (idempotencyKey?: string | null) => {
+  if (!idempotencyKey) return null;
+  const emailParts = idempotencyKey
+    .split(/[\s|,;]+/)
+    .flatMap((part) => part.split('_'))
+    .filter((part) => part.includes('@'));
+
+  const candidate = emailParts.find((part) => /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(part));
+  if (candidate) return candidate;
+
+  const match = idempotencyKey.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match?.[0]?.replace(/^camp_\d+_/i, '') || null;
+};
+
+const extractProjectFromIdempotencyKey = (idempotencyKey?: string | null) => {
+  if (!idempotencyKey) return 'unknown';
+  const bracketMatch = idempotencyKey.match(/^\[([^\]]+)\]/);
+  if (bracketMatch?.[1]) return normalizeProjectCode(bracketMatch[1]);
+  if (idempotencyKey.toLowerCase().includes('socialpilot')) return 'socialpilot';
+  if (idempotencyKey.toUpperCase().includes('GAP_WHATSAPP')) return 'GAP_WHATSAPP';
+  return 'unknown';
+};
 
 export async function registerApiRoutes(fastify: FastifyInstance) {
-  
+  fastify.get('/v1/getaipilot/users', async (_request, reply) => {
+    try {
+      const users = await fetchGetAiPilotUsers();
+      return reply.send({ success: true, users });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
   // ==========================
   // TEMPLATES
   // ==========================
@@ -52,6 +94,7 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
   fastify.post('/v1/templates', async (request: FastifyRequest<{ Body: any }>, reply) => {
     try {
       const { key, name, category, html, subject } = request.body as any;
+      const responsiveHtml = addResponsiveEmailFixes(html || '');
       
       let { data: product } = await supabase.from('products').select('id').eq('code', 'getaipilot').single();
       
@@ -70,14 +113,23 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
       const nextVersion = versions && versions.length > 0 ? versions[0].version_number + 1 : 1;
 
       // Insert version
-      await supabase.from('template_versions').insert({
+      const { data: versionRow, error: versionInsertError } = await supabase.from('template_versions').insert({
         template_id: templateId,
         version_number: nextVersion,
         subject: subject,
-        html_source: html,
+        html_source: responsiveHtml,
         status: 'live',
         created_by: 'Admin'
-      });
+      }).select('id').single();
+
+      if (versionInsertError) throw versionInsertError;
+
+      if (versionRow?.id) {
+        await supabase
+          .from('email_templates')
+          .update({ current_version_id: versionRow.id })
+          .eq('id', templateId);
+      }
 
       return reply.send({ success: true });
     } catch (err: any) {
@@ -131,26 +183,23 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
         .from('email_jobs')
         .select(`
           id, type, provider, status, created_at, idempotency_key,
+          campaigns ( product_id, products ( code ) ),
           contacts ( primary_email )
         `)
         .order('created_at', { ascending: false })
         .limit(10);
 
       const logs = (recentJobs || []).map((j: any) => {
-        let extractedEmail = 'unknown@recipient.com';
-        if (j.contacts?.primary_email) {
-          extractedEmail = j.contacts.primary_email;
-        } else if (j.idempotency_key) {
-          const parts = j.idempotency_key.split('_');
-          const emailPart = parts.find((p: string) => p.includes('@'));
-          if (emailPart) extractedEmail = emailPart;
-        }
+        const extractedEmail = j.contacts?.primary_email || extractEmailFromIdempotencyKey(j.idempotency_key) || 'unknown@recipient.com';
+        const projectCode = normalizeProjectCode(j.campaigns?.products?.code) !== 'unknown'
+          ? normalizeProjectCode(j.campaigns?.products?.code)
+          : extractProjectFromIdempotencyKey(j.idempotency_key);
         return {
           id: j.id,
           timestamp: new Date(j.created_at).toLocaleTimeString(),
           recipient: extractedEmail,
           type: j.type === 'campaign' ? 'Campaign' : 'Transactional',
-          provider: j.provider || 'ZeptoMail',
+          provider: `${j.provider || 'ZeptoMail'}${projectCode !== 'unknown' ? ` (${projectCode})` : ''}`,
           status: j.status === 'delivered' ? 'Delivered' : (j.status === 'failed' ? 'Failed' : 'Sent')
         };
       });
@@ -258,20 +307,15 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
         // Extract email
         if (j.contacts?.primary_email) {
           extractedEmail = j.contacts.primary_email;
-        } else if (j.idempotency_key) {
-          const parts = j.idempotency_key.split('_');
-          const emailPart = parts.find((p: string) => p.includes('@'));
-          if (emailPart) extractedEmail = emailPart;
+        } else {
+          extractedEmail = extractEmailFromIdempotencyKey(j.idempotency_key) || extractedEmail;
         }
 
         // Extract project code
         if (j.campaigns?.products?.code) {
-          projectCode = j.campaigns.products.code;
-        } else if (j.idempotency_key && j.idempotency_key.startsWith('[')) {
-          const closingIdx = j.idempotency_key.indexOf(']');
-          if (closingIdx > -1) {
-            projectCode = j.idempotency_key.substring(1, closingIdx);
-          }
+          projectCode = normalizeProjectCode(j.campaigns.products.code);
+        } else {
+          projectCode = extractProjectFromIdempotencyKey(j.idempotency_key);
         }
 
         if (projectCode === 'unknown') return; // Skip unknown legacy logs

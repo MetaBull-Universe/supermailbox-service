@@ -61,12 +61,20 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [zeptoApiKey, setZeptoApiKey] = useState('');
+  const [fromEmail, setFromEmail] = useState('noreply@getaipilot.com');
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
 
   useEffect(() => {
     fetchUsers();
     fetchMailerConfig();
   }, []);
+
+  useEffect(() => {
+    if (templates.length === 0) return;
+    if (!templates.some((template) => template.key === selectedTemplate)) {
+      setSelectedTemplate(templates[0].key);
+    }
+  }, [templates, selectedTemplate]);
 
   const fetchMailerConfig = async () => {
     try {
@@ -77,6 +85,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         const data = await res.json();
         if (data?.config) {
           if (data.config.zeptoApiKey) setZeptoApiKey(data.config.zeptoApiKey);
+          if (data.config.fromEmail) setFromEmail(data.config.fromEmail);
           if (data.config.smtpHost) setSmtpHost(data.config.smtpHost);
           if (data.config.smtpPort) setSmtpPort(String(data.config.smtpPort));
           if (data.config.smtpUser) setSmtpUser(data.config.smtpUser);
@@ -154,6 +163,10 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         scheduleDate || undefined
       );
 
+      if (!result.success) {
+        throw new Error(result.error || 'Broadcast failed before queueing.');
+      }
+
       onLaunchCampaign && onLaunchCampaign(
         `${campaignName} (${activeSelectedCount} Users)`,
         selectedTemplate,
@@ -178,6 +191,8 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
       setSelectedEmails({});
     } catch (err) {
       console.error('Broadcast failed:', err);
+      setBroadcastSuccessMessage(`Broadcast failed: ${err instanceof Error ? err.message : 'Please check the server logs.'}`);
+      setProviderUsed(null);
     } finally {
       setIsBroadcasting(false);
     }
@@ -191,12 +206,13 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: zeptoApiKey ? 'zeptomail' : smtpUser && smtpPass ? 'smtp' : 'ethereal',
+          provider: zeptoApiKey || fromEmail ? 'zeptomail' : smtpUser && smtpPass ? 'smtp' : 'ethereal',
           smtpHost,
           smtpPort: parseInt(smtpPort || '587'),
           smtpUser,
           smtpPass,
-          zeptoApiKey
+          ...(zeptoApiKey ? { zeptoApiKey } : {}),
+          fromEmail
         })
       });
       setSettingsSavedMessage(true);
@@ -234,9 +250,11 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             <CheckCircle2 size={24} color="var(--primary)" />
             <div>
               <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-main)' }}>{broadcastSuccessMessage}</div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Provider: <strong>{providerUsed}</strong>
-              </div>
+              {providerUsed && (
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Provider: <strong>{providerUsed}</strong>
+                </div>
+              )}
             </div>
           </div>
           {previewUrl && (
@@ -372,7 +390,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                   style={{ width: '100%', cursor: 'pointer' }}
                 >
                   {templates.map(t => (
-                    <option key={t.key} value={t.key}>{t.name} ({t.key})</option>
+                    <option key={t.key} value={t.key}>{t.name} - {t.category} ({t.key})</option>
                   ))}
                 </select>
               </div>
@@ -427,6 +445,11 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>ZeptoMail API Key</label>
                 <input type="password" value={zeptoApiKey} onChange={(e) => setZeptoApiKey(e.target.value)} className="ui-input" style={{ width: '100%' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Verified Sender Email</label>
+                <input type="email" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} placeholder="noreply@your-verified-domain.com" className="ui-input" style={{ width: '100%' }} />
               </div>
               
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>

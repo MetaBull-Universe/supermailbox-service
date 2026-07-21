@@ -2354,6 +2354,48 @@ th {
   border-radius: var(--radius-lg);
 }
 
+.email-mobile-preview div[style*="max-width:600px"],
+.email-mobile-preview div[style*="max-width: 600px"],
+.email-mobile-preview table[style*="max-width:600px"],
+.email-mobile-preview table[style*="max-width: 600px"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.email-mobile-preview div[style*="display:flex"],
+.email-mobile-preview div[style*="display: flex"] {
+  display: block !important;
+}
+
+.email-mobile-preview div[style*="flex:0 0 180px"],
+.email-mobile-preview div[style*="flex: 0 0 180px"],
+.email-mobile-preview div[style*="width:180px"],
+.email-mobile-preview div[style*="width: 180px"] {
+  width: 150px !important;
+  max-width: 72% !important;
+  margin: 0 auto 18px auto !important;
+}
+
+.email-mobile-preview a[style*="linear-gradient"],
+.email-mobile-preview a[style*="background: linear-gradient"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: 260px !important;
+  margin: 0 auto !important;
+  padding: 14px 16px !important;
+  text-align: center !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  box-sizing: border-box !important;
+}
+
+.email-mobile-preview h1,
+.email-mobile-preview h2,
+.email-mobile-preview h3,
+.email-mobile-preview p {
+  text-align: left !important;
+}
+
 .glass-panel,
 .metric-card {
   border-radius: var(--radius-lg);

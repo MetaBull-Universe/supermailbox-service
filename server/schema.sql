@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   action TEXT NOT NULL,
   resource_type TEXT NOT NULL,
   resource_id TEXT,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}',`
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

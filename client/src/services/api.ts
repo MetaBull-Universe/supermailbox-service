@@ -81,6 +81,7 @@ export interface GetAIPilotUser {
 
 export interface BroadcastResult {
   success?: boolean;
+  error?: string;
   campaignId?: string;
   queued?: number;
   campaign?: Campaign;
@@ -247,11 +248,13 @@ export class ApiService {
       } else {
         const errText = await res.text();
         console.error('Backend broadcast non-OK response:', res.status, errText);
+        return { success: false, queued: 0, error: errText };
       }
     } catch (err) {
       console.error('Broadcast fetch error:', err);
+      return { success: false, queued: 0, error: err instanceof Error ? err.message : 'Broadcast request failed' };
     }
-    return { success: false, queued: 0 };
+    return { success: false, queued: 0, error: 'Broadcast failed' };
   }
 
   static async getSuppressions(): Promise<SuppressionItem[]> {
@@ -269,34 +272,13 @@ export class ApiService {
 
   static async getGetAIPilotUsers(): Promise<GetAIPilotUser[]> {
     try {
-      const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrbHhsYXBwamN1dmRxanZlY2ZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODE0NzA4MywiZXhwIjoyMDgzNzIzMDgzfQ.8raDYx4BqeVELD691E720qBORhWEI4L68c_ED2JIt5w';
-      const response = await fetch(
-        'https://uklxlappjcuvdqjvecfh.supabase.co/rest/v1/profiles?select=*&limit=1000',
-        {
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`
-          }
-        }
-      );
+      const response = await fetch(`${API_BASE}/getaipilot/users`);
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data.map((p: any, idx: number) => ({
-            id: p.id || String(idx),
-            email: p.email || p.phone || (`user_${idx}@getaipilot.in`),
-            full_name: p.full_name || p.username || (p.email ? p.email.split('@')[0] : `User ${idx}`),
-            account_type: p.account_type || p.plan || 'Free Tier',
-            country: p.country || 'India',
-            created_at: (p.created_at || '2026-07-01').split('T')[0],
-            status: 'active',
-            onboarding_completed: p.onboarding_completed === true,
-            is_verified: Boolean(p.email_confirmed_at || (p.raw_user_meta_data && p.raw_user_meta_data.email_verified))
-          }));
-        }
+        if (Array.isArray(data?.users) && data.users.length > 0) return data.users;
       }
     } catch (err) {
-      // Fallback
+      console.warn('API getGetAIPilotUsers failed:', err);
     }
     // We are keeping the SYNCED_228_USERS snapshot for this specific external service (Supabase Profiles) 
     // as it is unrelated to our postgres backend tables for now.

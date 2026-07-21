@@ -1,9 +1,12 @@
 import { supabase } from '../supabase.js';
+import { addResponsiveEmailFixes } from './responsiveEmail.js';
 
 export async function renderTemplate(
   templateKey: string,
   variables: Record<string, any>
 ): Promise<{ subject: string; html: string }> {
+  const normalizedVariables = withDefaultTemplateVariables(variables);
+
   try {
     // Attempt to lookup template and its current live version from database
     const { data: templateRecord } = await supabase
@@ -12,17 +15,48 @@ export async function renderTemplate(
       .eq('key', templateKey)
       .single();
 
-    if (templateRecord && templateRecord.current_version_id) {
-      const { data: versionRecord } = await supabase
-        .from('template_versions')
-        .select('subject, html_source')
-        .eq('id', templateRecord.current_version_id)
-        .single();
+    if (templateRecord) {
+      let versionRecord: { subject: string; html_source: string } | null = null;
+
+      if (templateRecord.current_version_id) {
+        const { data } = await supabase
+          .from('template_versions')
+          .select('subject, html_source')
+          .eq('id', templateRecord.current_version_id)
+          .single();
+
+        versionRecord = data;
+      }
+
+      if (!versionRecord) {
+        const { data } = await supabase
+          .from('template_versions')
+          .select('subject, html_source')
+          .eq('template_id', templateRecord.id)
+          .eq('status', 'live')
+          .order('version_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        versionRecord = data;
+      }
+
+      if (!versionRecord) {
+        const { data } = await supabase
+          .from('template_versions')
+          .select('subject, html_source')
+          .eq('template_id', templateRecord.id)
+          .order('version_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        versionRecord = data;
+      }
 
       if (versionRecord) {
         return {
-          subject: interpolateVariables(versionRecord.subject, variables),
-          html: interpolateVariables(versionRecord.html_source, variables)
+          subject: interpolateVariables(versionRecord.subject, normalizedVariables),
+          html: addResponsiveEmailFixes(interpolateVariables(versionRecord.html_source, normalizedVariables))
         };
       }
     }
@@ -34,8 +68,8 @@ export async function renderTemplate(
   let finalSubject = '';
   let finalHtml = '';
 
-  const campaignName = variables.campaign_name || variables.campaignName || 'Announcement Blast';
-  const name = variables.full_name || variables.name || variables.email?.split('@')[0] || 'Member';
+  const campaignName = normalizedVariables.campaign_name || normalizedVariables.campaignName || 'Announcement Blast';
+  const name = normalizedVariables.full_name || normalizedVariables.name || normalizedVariables.email?.split('@')[0] || 'Member';
 
   if (templateKey === 'auth_welcome') {
     finalSubject = 'Welcome to QuickPost! 🎉';
@@ -128,20 +162,38 @@ export async function renderTemplate(
           You have a new notification or update.
         </p>
         <p style="color: #8E8D9E; font-size: 13px; border-top: 1px solid #2A2A2C; padding-top: 20px; margin-top: 36px;">
-          Sent to ${variables.email || 'you'} via SupermailBox Dedicated Messaging Infrastructure
+          Sent to ${normalizedVariables.email || 'you'} via SupermailBox Dedicated Messaging Infrastructure
         </p>
       </div>
     `;
   }
 
   return {
-    subject: interpolateVariables(finalSubject, variables),
-    html: interpolateVariables(finalHtml, variables)
+    subject: interpolateVariables(finalSubject, normalizedVariables),
+    html: addResponsiveEmailFixes(interpolateVariables(finalHtml, normalizedVariables))
   };
 }
 
 function interpolateVariables(source: string, variables: Record<string, any>): string {
-  return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+  return source.replace(/\{\{\s*\.?\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
     return variables[key] !== undefined ? String(variables[key]) : match;
   });
+}
+
+function withDefaultTemplateVariables(variables: Record<string, any>): Record<string, any> {
+  const confirmationUrl =
+    variables.ConfirmationURL ||
+    variables.confirmation_url ||
+    variables.confirmationUrl ||
+    variables.verify_url ||
+    variables.verifyUrl;
+
+  return {
+    ...variables,
+    ConfirmationURL: confirmationUrl,
+    confirmation_url: confirmationUrl,
+    confirmationUrl: confirmationUrl,
+    verify_url: confirmationUrl,
+    verifyUrl: confirmationUrl
+  };
 }
