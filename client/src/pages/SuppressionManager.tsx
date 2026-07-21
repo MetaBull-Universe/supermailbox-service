@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, AlertCircle, Search, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Search, ShieldAlert, Ban, MailX, UserMinus } from 'lucide-react';
 import type { SuppressionItem } from '../services/api';
 
 interface SuppressionProps {
@@ -21,12 +21,18 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail) return;
-    onAddSuppression && onAddSuppression(newEmail, newReason);
+    if (onAddSuppression) {
+      onAddSuppression(newEmail, newReason);
+    }
     setNewEmail('');
     setIsModalOpen(false);
   };
 
   const filtered = suppressions.filter(s => s.email.toLowerCase().includes(searchTerm.toLowerCase()));
+  const bounceCount = suppressions.filter((item) => item.reason === 'bounce').length;
+  const complaintCount = suppressions.filter((item) => item.reason === 'complaint').length;
+  const unsubscribeCount = suppressions.filter((item) => item.reason === 'unsubscribe').length;
+  const manualCount = suppressions.filter((item) => item.reason === 'manual').length;
 
   return (
     <div className="screen-page suppression-screen fade-in">
@@ -45,6 +51,29 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
         <button onClick={() => setIsModalOpen(true)} className="btn-primary">
           <Plus size={16} /> Block Email
         </button>
+      </div>
+
+      <div className="suppression-insight-grid" aria-label="Suppression summary">
+        <div className="suppression-insight-card featured">
+          <span><Ban size={16} /> Total blocked</span>
+          <strong>{suppressions.length}</strong>
+          <small>Contacts excluded from every send</small>
+        </div>
+        <div className="suppression-insight-card">
+          <span><MailX size={16} /> Hard bounces</span>
+          <strong>{bounceCount}</strong>
+          <small>Mailbox-level delivery failures</small>
+        </div>
+        <div className="suppression-insight-card warning">
+          <span><AlertCircle size={16} /> Complaints</span>
+          <strong>{complaintCount}</strong>
+          <small>Reputation-sensitive events</small>
+        </div>
+        <div className="suppression-insight-card">
+          <span><UserMinus size={16} /> Manual and opt-out</span>
+          <strong>{manualCount + unsubscribeCount}</strong>
+          <small>Admin blocks and unsubscribes</small>
+        </div>
       </div>
 
       <div className="screen-panel">

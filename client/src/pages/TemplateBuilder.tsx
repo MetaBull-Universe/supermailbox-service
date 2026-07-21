@@ -405,8 +405,8 @@ ${footerHtml}
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
-          flexShrink: 0,
-          minHeight: previewMode === 'mobile' ? '800px' : 'auto'
+          flex: 1,
+          minHeight: 0
         }}>
           {/* Faux Header (Browser or Mobile Notch) */}
           {previewMode === 'desktop' ? (
@@ -425,7 +425,7 @@ ${footerHtml}
           )}
 
           {/* Rendered Output */}
-          <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '20px', background: '#ffffff' }}>
+          <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '20px', background: '#ffffff', overflowY: 'auto' }}>
              <div dangerouslySetInnerHTML={{ __html: getRenderedPreview() }} />
           </div>
         </div>

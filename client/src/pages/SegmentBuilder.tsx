@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -30,6 +30,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [providerUsed, setProviderUsed] = useState<string | null>(null);
   const [, setJobStats] = useState<any | null>(null);
   const [customTestEmail, setCustomTestEmail] = useState('');
+  const [showAddEmailModal, setShowAddEmailModal] = useState(false);
 
   const handleAddCustomEmail = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +52,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
     ]);
     setSelectedEmails(prev => ({ ...prev, [cleanEmail]: true }));
     setCustomTestEmail('');
+    setShowAddEmailModal(false);
   };
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -251,7 +253,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         {/* LEFT COLUMN: Configuration */}
         <div className="campaign-left">
           
-          <div className="screen-panel campaign-panel">
+          <div className="screen-panel campaign-audience-panel">
             <div className="campaign-panel-title">
               <span>Segment controls</span>
               <h3>Target Audience</h3>
@@ -279,6 +281,9 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={selectVisible} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Select Visible</button>
                 <button onClick={deselectAll} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Clear All</button>
+                <button onClick={() => setShowAddEmailModal(true)} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+                  <Plus size={14} style={{ marginRight: '4px' }} /> Add Email
+                </button>
               </div>
               <div className="search-shell">
                 <Search size={14} color="var(--text-muted)" />
@@ -291,7 +296,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
               </div>
             </div>
 
-            <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', maxHeight: '320px', overflowY: 'auto' }}>
+            <div className="campaign-table-shell">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr>
@@ -332,18 +337,6 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                 </tbody>
               </table>
             </div>
-
-            <form onSubmit={handleAddCustomEmail} style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
-              <input
-                type="email"
-                placeholder="Add custom test email..."
-                value={customTestEmail}
-                onChange={(e) => setCustomTestEmail(e.target.value)}
-                className="ui-input"
-                style={{ flex: 1 }}
-              />
-              <button type="submit" className="btn-secondary">Add & Select</button>
-            </form>
           </div>
           
         </div>
@@ -351,7 +344,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         {/* RIGHT COLUMN: Sticky Summary */}
         <div className="campaign-summary">
           
-          <div className="screen-panel" style={{ padding: '24px' }}>
+          <div className="screen-panel campaign-launch-card">
             <div className="campaign-panel-title compact">
               <span>Launch setup</span>
               <h3>Campaign Details</h3>
@@ -452,6 +445,36 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Add Email Modal */}
+      {showAddEmailModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--neutral)' }}>Add Test Email</h3>
+              <button onClick={() => setShowAddEmailModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+            </div>
+            
+            <form onSubmit={handleAddCustomEmail} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>EMAIL ADDRESS</label>
+                <input
+                  type="email"
+                  placeholder="e.g. hello@example.com"
+                  value={customTestEmail}
+                  onChange={(e) => setCustomTestEmail(e.target.value)}
+                  className="ui-input"
+                  style={{ width: '100%' }}
+                  autoFocus
+                />
+              </div>
+              <button type="submit" className="btn-primary" style={{ marginTop: '8px' }}>Add & Select</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default SegmentBuilder;

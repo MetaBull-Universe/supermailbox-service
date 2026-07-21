@@ -116,21 +116,6 @@ export const App: React.FC = () => {
     setSuppressions((prev) => prev.filter((s) => s.id !== id));
   };
 
-  const getTabTitle = (tab: TabType) => {
-    switch (tab) {
-      case 'dashboard':
-        return 'Queue Monitor & Dashboard';
-      case 'project_logs':
-        return 'Project-wise Email Logs';
-      case 'templates':
-        return 'Template Builder & MJML Inspector';
-      case 'campaigns':
-        return 'Audience Segments & Campaigns';
-      case 'contacts':
-        return 'Contacts & Global Suppression Manager';
-    }
-  };
-
   return (
     <div className="app-shell">
       {/* Collapsible Sidebar */}
@@ -143,21 +128,6 @@ export const App: React.FC = () => {
 
       {/* Main Workspace Content */}
       <div className="app-workspace">
-        {/* Sleek Light Header */}
-        <header className="app-topbar">
-          <div className="app-title-block">
-            <span>SupermailBox console</span>
-            <h1>
-              {getTabTitle(activeTab)}
-            </h1>
-          </div>
-          <div className="app-topbar-actions">
-            <span className="app-live-badge">
-              <b />
-              Telemetry Online
-            </span>
-          </div>
-        </header>
 
         {/* Dynamic Screen Viewport */}
         <main className="app-main">

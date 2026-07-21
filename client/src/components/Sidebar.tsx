@@ -48,35 +48,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className="sidebar-shell"
       style={{
-        width: collapsed ? '72px' : '240px',
+        width: collapsed ? '80px' : '260px',
         transition: 'width 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         position: 'relative',
         zIndex: 40,
-        height: '100vh',
-        flexShrink: 0
+        height: '100%',
+        flexShrink: 0,
+        background: '#ffffff',
+        borderRadius: '32px',
+        padding: '16px 0',
+        border: 'none',
+        boxShadow: 'var(--shadow-sm)'
       }}
     >
       <div>
         {/* Brand */}
-        <div 
+        <div
           className="sidebar-brand"
-          style={{ 
-            height: '64px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            padding: '0 20px',
+          style={{
+            height: '64px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 24px',
+            borderBottom: 'none',
             justifyContent: collapsed ? 'center' : 'flex-start'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-            <div 
+            <div
               className="sidebar-logo"
-              style={{ 
-                width: '32px', 
-                height: '32px', 
+              style={{
+                width: '32px',
+                height: '32px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -113,13 +119,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     justifyContent: collapsed ? 'center' : 'flex-start',
                     textAlign: 'left',
                     width: '100%',
-                    gap: '12px'
+                    gap: '12px',
+                    padding: '12px 16px',
+                    borderRadius: '16px',
+                    marginBottom: '4px',
+                    background: isActive ? 'var(--neutral)' : 'transparent',
+                    color: isActive ? '#ffffff' : 'var(--text-main)',
+                    border: 'none',
+                    boxShadow: 'none'
                   }}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon size={18} color={isActive ? 'var(--text-main)' : 'var(--text-muted)'} />
+                  <Icon size={20} color={isActive ? '#ffffff' : 'var(--text-main)'} />
                   {!collapsed && (
-                    <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                    <span style={{ fontWeight: 500, fontSize: '0.95rem', color: isActive ? '#ffffff' : 'var(--text-main)' }}>
                       {item.label}
                     </span>
                   )}
