@@ -1,5 +1,4 @@
 // API Service connecting to Real Fastify Backend
-import { SYNCED_228_USERS } from './getaipilotUsersData';
 
 export interface MetricCardData {
   title: string;
@@ -76,6 +75,10 @@ export interface GetAIPilotUser {
   created_at: string;
   status: string;
   onboarding_completed?: boolean;
+  onboarding_status?: string;
+  tour_seen?: boolean;
+  tour_completed?: boolean;
+  tour_step?: number;
   is_verified?: boolean;
 }
 
@@ -280,8 +283,6 @@ export class ApiService {
     } catch (err) {
       console.warn('API getGetAIPilotUsers failed:', err);
     }
-    // We are keeping the SYNCED_228_USERS snapshot for this specific external service (Supabase Profiles) 
-    // as it is unrelated to our postgres backend tables for now.
-    return SYNCED_228_USERS;
+    return [];
   }
 }

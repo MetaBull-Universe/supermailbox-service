@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -9,6 +9,7 @@ interface SegmentBuilderProps {
 }
 
 type SegmentFilterMode = 'all' | 'pending_onboarding' | 'unverified' | 'completed_onboarding';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   templates,
@@ -20,7 +21,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   // GetAIPilot users state
   const [getAIPilotUsers, setGetAIPilotUsers] = useState<GetAIPilotUser[]>([]);
-  const [, setIsLoadingUsers] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<SegmentFilterMode>('all');
   const [selectedEmails, setSelectedEmails] = useState<Record<string, boolean>>({});
@@ -122,6 +123,14 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
     return true;
   });
 
+  const getOnboardingLabel = (user: GetAIPilotUser) => {
+    if (user.onboarding_completed) return 'Onboarded';
+    if (user.tour_completed) return 'Tour done';
+    if (user.tour_step && user.tour_step > 0) return `Step ${user.tour_step}`;
+    if (user.tour_seen) return 'Tour started';
+    return 'Pending';
+  };
+
   const activeSelectedCount = Object.values(selectedEmails).filter(Boolean).length;
 
   const toggleSelectEmail = (email: string) => {
@@ -153,7 +162,12 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
     const recipients = getAIPilotUsers
       .filter(u => Boolean(selectedEmails[u.email]))
+      .filter(u => EMAIL_RE.test(u.email))
       .map(u => ({ email: u.email, full_name: u.full_name }));
+
+    if (recipients.length === 0) {
+      throw new Error('No valid email recipients selected.');
+    }
 
     try {
       const result = await ApiService.broadcastCampaign(
@@ -302,6 +316,9 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                 <button onClick={() => setShowAddEmailModal(true)} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
                   <Plus size={14} style={{ marginRight: '4px' }} /> Add Email
                 </button>
+                <button onClick={fetchUsers} disabled={isLoadingUsers} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+                  <RefreshCw size={14} style={{ marginRight: '4px', animation: isLoadingUsers ? 'spin 1s linear infinite' : undefined }} /> Refresh
+                </button>
               </div>
               <div className="search-shell">
                 <Search size={14} color="var(--text-muted)" />
@@ -343,7 +360,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                           ) : u.onboarding_completed ? (
                             <span className="badge-pill badge-success">Onboarded</span>
                           ) : (
-                            <span className="badge-pill badge-warning">Pending</span>
+                            <span className="badge-pill badge-warning">{getOnboardingLabel(u)}</span>
                           )}
                         </td>
                         <td>
