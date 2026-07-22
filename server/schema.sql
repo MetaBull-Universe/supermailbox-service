@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+);   
 
 -- 2. Unified Contacts Model
 CREATE TABLE IF NOT EXISTS public.contacts (
