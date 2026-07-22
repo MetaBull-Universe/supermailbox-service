@@ -66,6 +66,18 @@ export interface SuppressionItem {
   linkedIdentities?: string[];
 }
 
+export interface BounceReportItem {
+  id: string;
+  email: string;
+  bounceType: 'hard' | 'soft';
+  category: string;
+  reason: string;
+  subject: string;
+  source: string;
+  processedAt: string;
+  displayTime: string;
+}
+
 export interface GetAIPilotUser {
   id: string;
   email: string;
@@ -269,6 +281,49 @@ export class ApiService {
       }
     } catch (err) {
       console.warn('API getSuppressions failed:', err);
+    }
+    return [];
+  }
+
+  static async addSuppression(email: string, reason: SuppressionItem['reason']): Promise<SuppressionItem | null> {
+    try {
+      const res = await fetch(`${API_BASE}/suppressions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, reason })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.suppression) return data.suppression;
+      }
+    } catch (err) {
+      console.warn('API addSuppression failed:', err);
+    }
+    return null;
+  }
+
+  static async removeSuppression(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/suppressions/${id}`, {
+        method: 'DELETE'
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn('API removeSuppression failed:', err);
+      return false;
+    }
+  }
+
+  static async getBounceReports(): Promise<BounceReportItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/bounce-reports`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.bounces)) return data.bounces;
+      }
+    } catch (err) {
+      console.warn('API getBounceReports failed:', err);
     }
     return [];
   }

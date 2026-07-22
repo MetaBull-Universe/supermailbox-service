@@ -3,6 +3,8 @@ import { supabase } from '../supabase.js';
 import { campaignQueue, transactionalQueue } from '../queues/campaignQueue.js';
 import { addResponsiveEmailFixes } from '../services/responsiveEmail.js';
 import { fetchGetAiPilotUsers } from '../services/getaipilotUsers.js';
+import { addSuppression, removeSuppression } from '../services/suppression.js';
+import { syncSuppressionsFromWebhookLogs } from './webhooks.js';
 
 const normalizeProjectCode = (value?: string | null) => {
   if (!value) return 'unknown';
@@ -33,6 +35,78 @@ const extractProjectFromIdempotencyKey = (idempotencyKey?: string | null) => {
   if (idempotencyKey.toLowerCase().includes('socialpilot')) return 'socialpilot';
   if (idempotencyKey.toUpperCase().includes('GAP_WHATSAPP')) return 'GAP_WHATSAPP';
   return 'unknown';
+};
+
+const formatSuppression = (s: any) => ({
+  id: s.id,
+  email: s.email,
+  reason: s.reason,
+  dateAdded: new Date(s.created_at).toISOString().replace('T', ' ').substring(0, 16),
+  linkedIdentities: []
+});
+
+const parseZeptoExportDate = (value?: string | null) => {
+  if (!value) return new Date().toISOString();
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+(AM|PM)$/i);
+  if (!match) return new Date(value).toISOString();
+
+  const [, day, month, year, hourText, minute, second, meridiem] = match;
+  let hour = Number(hourText);
+  if (meridiem.toUpperCase() === 'PM' && hour < 12) hour += 12;
+  if (meridiem.toUpperCase() === 'AM' && hour === 12) hour = 0;
+
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    hour,
+    Number(minute),
+    Number(second)
+  ).toISOString();
+};
+
+const classifyBounceReason = (reason: string, bounceType: 'hard' | 'soft') => {
+  const text = reason.toLowerCase();
+  if (text.includes('overquota') || text.includes('quota') || text.includes('storage') || text.includes('mailbox full')) {
+    return 'Over quota';
+  }
+  if (text.includes('nxdomain') || text.includes('domain not found') || text.includes('host not reachable')) {
+    return bounceType === 'hard' ? 'Domain not found' : 'Connection issue';
+  }
+  if (text.includes('no mailbox') || text.includes('5.1.1') || text.includes('user unknown')) {
+    return 'User not found';
+  }
+  if (text.includes('policy') || text.includes('rejected')) {
+    return 'Policy failure';
+  }
+  return bounceType === 'hard' ? 'Permanent failure' : 'Temporary failure';
+};
+
+const formatBounceRecord = (record: any, fallbackId: string) => {
+  const bounceType = record.bounceType === 'soft' ? 'soft' : 'hard';
+  const reason = record.reason || record.diagnostic || '';
+  const processedAt = record.processedAt || record.timestamp || new Date().toISOString();
+  const displayTime = new Date(processedAt).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  return {
+    id: record.id || fallbackId,
+    email: String(record.email || '').toLowerCase().trim(),
+    bounceType,
+    category: record.category || classifyBounceReason(reason, bounceType),
+    reason,
+    subject: record.subject || 'Unknown subject',
+    source: record.source || 'ZeptoMail',
+    processedAt,
+    displayTime
+  };
 };
 
 export async function registerApiRoutes(fastify: FastifyInstance) {
@@ -149,6 +223,8 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
   // ==========================
   fastify.get('/v1/suppressions', async (_request, reply) => {
     try {
+      await syncSuppressionsFromWebhookLogs();
+
       const { data: suppressions, error } = await supabase
         .from('suppression_list')
         .select('id, email, reason, created_at')
@@ -156,15 +232,123 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
 
       if (error) throw error;
 
-      const formatted = (suppressions || []).map((s: any) => ({
-        id: s.id,
-        email: s.email,
-        reason: s.reason,
-        dateAdded: new Date(s.created_at).toISOString().replace('T', ' ').substring(0, 16),
-        linkedIdentities: [] 
-      }));
+      const formatted = (suppressions || []).map(formatSuppression);
 
       return reply.send({ success: true, suppressions: formatted });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  fastify.post('/v1/suppressions', async (request: FastifyRequest<{ Body: any }>, reply: FastifyReply) => {
+    try {
+      const { email, reason } = (request.body as any) || {};
+      if (!email) {
+        return reply.status(400).send({ success: false, error: 'Email is required' });
+      }
+
+      const suppression = await addSuppression(email, reason || 'manual');
+      if (!suppression) {
+        return reply.status(500).send({ success: false, error: 'Unable to save suppression entry' });
+      }
+
+      return reply.send({ success: true, suppression: formatSuppression(suppression) });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  fastify.delete('/v1/suppressions/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    try {
+      const deleted = await removeSuppression(request.params.id);
+      if (!deleted) {
+        return reply.status(500).send({ success: false, error: 'Unable to remove suppression entry' });
+      }
+
+      return reply.send({ success: true });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  fastify.get('/v1/bounce-reports', async (_request, reply) => {
+    try {
+      const { data: logs, error } = await supabase
+        .from('webhook_logs')
+        .select('id, provider, raw_payload, received_at')
+        .in('provider', ['zeptomail_export'])
+        .order('received_at', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+
+      const bounceReports = (logs || []).flatMap((log: any) => {
+        const records = Array.isArray(log.raw_payload?.records)
+          ? log.raw_payload.records
+          : Array.isArray(log.raw_payload)
+          ? log.raw_payload
+          : [log.raw_payload];
+
+        return records.map((record: any, index: number) => formatBounceRecord(record, `${log.id}_${index}`));
+      }).filter((record: any) => record.email);
+
+      const seen = new Set<string>();
+      const uniqueReports = bounceReports.filter((record: any) => {
+        const key = `${record.email}:${record.bounceType}:${record.processedAt}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a: any, b: any) => new Date(b.processedAt).getTime() - new Date(a.processedAt).getTime());
+
+      return reply.send({ success: true, bounces: uniqueReports });
+    } catch (err: any) {
+      fastify.log.error(err);
+      return reply.status(500).send({ success: false, error: err.message });
+    }
+  });
+
+  fastify.post('/v1/bounce-reports/import', async (request: FastifyRequest<{ Body: any }>, reply: FastifyReply) => {
+    try {
+      const { records } = (request.body as any) || {};
+      if (!Array.isArray(records) || records.length === 0) {
+        return reply.status(400).send({ success: false, error: 'records array is required' });
+      }
+
+      const normalizedRecords = records
+        .map((record: any) => ({
+          email: String(record.email || '').toLowerCase().trim(),
+          bounceType: record.bounceType === 'soft' ? 'soft' : 'hard',
+          reason: record.reason || '',
+          category: record.category,
+          subject: record.subject || 'Unknown subject',
+          processedAt: parseZeptoExportDate(record.processedAt),
+          source: 'ZeptoMail export'
+        }))
+        .filter((record: any) => record.email);
+
+      const { error } = await supabase.from('webhook_logs').insert({
+        provider: 'zeptomail_export',
+        raw_payload: {
+          source: 'zeptomail_export',
+          imported_at: new Date().toISOString(),
+          records: normalizedRecords
+        },
+        signature_valid: true,
+        processed: true
+      });
+
+      if (error) throw error;
+
+      for (const record of normalizedRecords) {
+        if (record.bounceType === 'hard') {
+          await addSuppression(record.email, 'bounce');
+        }
+      }
+
+      return reply.send({ success: true, imported: normalizedRecords.length });
     } catch (err: any) {
       fastify.log.error(err);
       return reply.status(500).send({ success: false, error: err.message });
