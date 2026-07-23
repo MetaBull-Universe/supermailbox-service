@@ -155,7 +155,7 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.2)',
+            background: 'color-mix(in srgb, var(--ink) 24%, transparent)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, Layout, Code, Monitor, Smartphone, Save, Check, Plus, X, Layers } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Sparkles, Layout, Code, Monitor, Smartphone, Save, Check, Plus, X, Layers, ChevronDown, Eye, Braces, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
 import type { Template } from '../services/api';
 
 interface TemplateBuilderProps {
@@ -74,9 +74,11 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
   const activeTemplate = templates.find((t) => t.key === selectedKey) || templates[0];
 
   const liveVersion = activeTemplate?.versions.find((v) => v.status === 'Live') || activeTemplate?.versions[0];
+  const templateVariables = liveVersion?.variables?.length ? liveVersion.variables : ['name', 'otp_code', 'amount'];
+  const templateStatus = liveVersion?.status || 'Draft';
   const [subject, setSubject] = useState(liveVersion?.subject || 'Welcome to GetAIPilot! 🚀');
 
-  const [accentColor, setAccentColor] = useState<string>('#0f172a');
+  const [accentColor, setAccentColor] = useState<string>('#0D4F3C');
 
   const [content, setContent] = useState<SimpleEmailContent>({
     badgeText: 'ACCOUNT VERIFICATION',
@@ -96,6 +98,8 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
+  const templateMenuRef = useRef<HTMLDivElement | null>(null);
   const [newTmplName, setNewTmplName] = useState<string>('');
   const [newTmplKey, setNewTmplKey] = useState<string>('');
   const [newTmplCategory] = useState<string>('transactional');
@@ -104,7 +108,7 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
   const generateCompiledHtml = () => {
     const badgeHtml = content.badgeText
       ? `<div style="text-align: center; margin-bottom: 22px;">
-  <span style="background: ${accentColor}; color: white; padding: 6px 16px; border-radius: 999px; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;">
+  <span style="background: ${accentColor}; color: #FFFFFC; padding: 6px 16px; border-radius: 999px; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;">
     ${content.badgeText}
   </span>
 </div>`
@@ -112,50 +116,50 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
 
     const headingHtml = content.heading
       ? `<div style="text-align: center; margin-bottom: 20px;">
-  <h1 style="color: #0f172a; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">${content.heading}</h1>
+  <h1 style="color: #252722; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em; font-family: 'Host Grotesk', sans-serif;">${content.heading}</h1>
 </div>`
       : '';
 
     const bodyHtml = content.body
-      ? `<div style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      ? `<div style="color: #676D63; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center; font-family: 'Host Grotesk', sans-serif;">
   ${content.body.replace(/\n/g, '<br/>')}
 </div>`
       : '';
 
     let featureHtml = '';
     if (content.featureBox === 'otp') {
-      featureHtml = `<div style="margin: 28px auto; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; max-width: 280px;">
-  <div style="font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; font-family: -apple-system, sans-serif;">Security Code</div>
+      featureHtml = `<div style="margin: 28px auto; text-align: center; background: #F8F8F6; border: 1px solid #D9D6CD; padding: 24px; border-radius: 12px; max-width: 280px;">
+  <div style="font-size: 12px; font-weight: 600; color: #676D63; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; font-family: 'Host Grotesk', sans-serif;">Security Code</div>
   <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 32px; font-weight: 800; color: ${accentColor}; letter-spacing: 0.1em;">{{otp_code}}</span>
 </div>`;
     } else if (content.featureBox === 'receipt') {
-      featureHtml = `<div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; font-family: -apple-system, sans-serif;">
-  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px;">
-    <span style="color: #64748b; font-size: 14px;">Invoice Number</span>
-    <strong style="color: #0f172a; font-size: 14px;">{{invoice_id}}</strong>
+      featureHtml = `<div style="background: #FFFFFC; border: 1px solid #D9D6CD; border-radius: 12px; padding: 24px; margin: 24px 0; font-family: 'Host Grotesk', sans-serif;">
+  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #F1EFEA; padding-bottom: 12px; margin-bottom: 14px;">
+    <span style="color: #676D63; font-size: 14px;">Invoice Number</span>
+    <strong style="color: #252722; font-size: 14px;">{{invoice_id}}</strong>
   </div>
   <div style="display: flex; justify-content: space-between; align-items: center;">
-    <span style="color: #64748b; font-size: 14px;">Total Paid</span>
-    <strong style="color: #059669; font-size: 22px; font-weight: 700;">{{amount}}</strong>
+    <span style="color: #676D63; font-size: 14px;">Total Paid</span>
+    <strong style="color: #24754E; font-size: 22px; font-weight: 700;">{{amount}}</strong>
   </div>
 </div>`;
     }
 
     const ctaHtml = content.ctaLabel
       ? `<div style="text-align: center; margin: 32px 0;">
-  <a href="${content.ctaUrl || 'https://getaipilot.com'}" style="display: inline-block; background: ${accentColor}; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-family: -apple-system, sans-serif;">
+  <a href="${content.ctaUrl || 'https://getaipilot.com'}" style="display: inline-block; background: ${accentColor}; color: #FFFFFC; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-family: 'Host Grotesk', sans-serif;">
     ${content.ctaLabel}
   </a>
 </div>`
       : '';
 
     const footerHtml = content.footerText
-      ? `<div style="border-top: 1px solid #f1f5f9; margin-top: 36px; padding-top: 24px; text-align: center;">
-  <p style="color: #94a3b8; font-size: 12px; line-height: 1.6; margin: 0; font-family: -apple-system, sans-serif;">${content.footerText}</p>
+      ? `<div style="border-top: 1px solid #F1EFEA; margin-top: 36px; padding-top: 24px; text-align: center;">
+  <p style="color: #8B9187; font-size: 12px; line-height: 1.6; margin: 0; font-family: 'Host Grotesk', sans-serif;">${content.footerText}</p>
 </div>`
       : '';
 
-    return `<div style="background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);">
+    return `<div style="background: #FFFFFC; padding: 40px; border-radius: 16px; border: 1px solid #D9D6CD; max-width: 600px; margin: 0 auto;">
 ${badgeHtml}
 ${headingHtml}
 ${bodyHtml}
@@ -191,8 +195,31 @@ ${footerHtml}
     return previewHtml;
   };
 
+  const editorHtml = getActiveHtml();
+  const editorLineNumbers = useMemo(
+    () => editorHtml.split('\n').map((_, index) => index + 1),
+    [editorHtml]
+  );
+  const readinessItems = [
+    { state: 'pass', label: 'Subject line', detail: subject.trim() ? subject : 'Missing subject' },
+    { state: templateVariables.length ? 'pass' : 'warn', label: 'Variables', detail: `${templateVariables.length} merge field${templateVariables.length === 1 ? '' : 's'}` },
+    { state: editorHtml.includes(RESPONSIVE_EMAIL_STYLE_ID) ? 'pass' : 'fail', label: 'Responsive CSS', detail: editorHtml.includes(RESPONSIVE_EMAIL_STYLE_ID) ? 'Attached' : 'Not attached' },
+  ];
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!templateMenuRef.current?.contains(event.target as Node)) {
+        setIsTemplateMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, []);
+
   const handleTemplateSelect = (key: string) => {
     setSelectedKey(key);
+    setIsTemplateMenuOpen(false);
     const tmpl = templates.find((t) => t.key === key);
     if (tmpl) {
       const ver = tmpl.versions.find((v) => v.status === 'Live') || tmpl.versions[0];
@@ -209,7 +236,7 @@ ${footerHtml}
       // Keep updating the form fallbacks just in case user switches to simple mode
 
       if (key.includes('billing') || key.includes('receipt') || key.includes('payment')) {
-        setAccentColor('#059669');
+        setAccentColor('#24754E');
         setContent({
           badgeText: 'PAYMENT CONFIRMED',
           heading: 'Payment Received Successfully! 💳',
@@ -220,7 +247,7 @@ ${footerHtml}
           footerText: '© 2026 GetAIPilot Billing Services. All rights reserved.'
         });
       } else if (key.includes('welcome') || key.includes('auth')) {
-        setAccentColor('#2563eb');
+        setAccentColor('#2357D8');
         setContent({
           badgeText: 'ACCOUNT VERIFICATION',
           heading: 'Welcome Aboard, {{name}}! 🎉',
@@ -231,7 +258,7 @@ ${footerHtml}
           footerText: '© 2026 GetAIPilot Core Platform. All rights reserved.'
         });
       } else {
-        setAccentColor('#0f172a');
+        setAccentColor('#0D4F3C');
         setContent({
           badgeText: 'EXCITING NEWS',
           heading: 'New Announcement for {{name}} 🚀',
@@ -250,7 +277,7 @@ ${footerHtml}
     setTimeout(() => {
       if (promptText.toLowerCase().includes('payment') || promptText.toLowerCase().includes('receipt')) {
         setSubject('Payment Confirmed - Receipt {{invoice_id}} 💳');
-        setAccentColor('#059669');
+        setAccentColor('#24754E');
         setContent({
           badgeText: 'PAYMENT CONFIRMED',
           heading: 'Payment Received Successfully! 💳',
@@ -262,7 +289,7 @@ ${footerHtml}
         });
       } else if (promptText.toLowerCase().includes('welcome') || promptText.toLowerCase().includes('otp')) {
         setSubject('Welcome to GetAIPilot Autonomous Suite 🚀');
-        setAccentColor('#2563eb');
+        setAccentColor('#2357D8');
         setContent({
           badgeText: 'ACCOUNT VERIFIED',
           heading: 'Welcome Aboard, {{name}}! 🎉',
@@ -274,7 +301,7 @@ ${footerHtml}
         });
       } else {
         setSubject('Exciting Update: New Features Live! ✨');
-        setAccentColor('#0f172a');
+        setAccentColor('#0D4F3C');
         setContent({
           badgeText: 'PRODUCT ANNOUNCEMENT',
           heading: 'Supercharge Your Email Workflows ⚡',
@@ -327,12 +354,31 @@ ${footerHtml}
   };
 
   return (
-    <div className="template-workshop">
+    <div className={`template-workshop mode-${mode}`}>
       
       {/* Background Dotted Canvas */}
       <div className="template-grid-bg" style={{
         position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
       }} />
+
+      <header className="template-studio-command">
+        <div className="template-toolbar-title">
+          <span>Templates</span>
+          <strong>{activeTemplate?.name || 'Email builder'}</strong>
+        </div>
+        <div className="template-toolbar-actions">
+          <span className={`template-status-badge status-${templateStatus.toLowerCase()}`}>
+            <ShieldCheck size={14} /> {templateStatus}
+          </span>
+          <button type="button" className={showSampleData ? 'active' : ''} onClick={() => setShowSampleData(!showSampleData)}>
+            <Layers size={14} /> {showSampleData ? 'Sample' : 'Raw'}
+          </button>
+          <button type="button" className="primary" onClick={handleSave}>
+            {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+            {saveSuccess ? 'Saved' : 'Save'}
+          </button>
+        </div>
+      </header>
 
       {/* LEFT FLOATING PROPERTIES PANEL */}
       <div className="template-tools-panel" style={{
@@ -351,21 +397,61 @@ ${footerHtml}
               <Plus size={14} /> New
             </button>
           </div>
-          <select value={selectedKey} onChange={(e) => handleTemplateSelect(e.target.value)} className="ui-input" style={{ width: '100%', fontWeight: 600, fontSize: '0.9375rem', boxShadow: 'none' }}>
-            {templates.map(t => <option key={t.key} value={t.key}>{t.name}</option>)}
-          </select>
+          <div className="template-select" ref={templateMenuRef}>
+            <button
+              type="button"
+              className="template-select-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={isTemplateMenuOpen}
+              onClick={() => setIsTemplateMenuOpen((open) => !open)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setIsTemplateMenuOpen(false);
+                if (event.key === 'ArrowDown') setIsTemplateMenuOpen(true);
+              }}
+            >
+              <span>
+                <strong>{activeTemplate?.name || 'Select template'}</strong>
+                <small>{activeTemplate?.key || 'No template selected'}</small>
+              </span>
+              <ChevronDown size={17} className={isTemplateMenuOpen ? 'open' : undefined} />
+            </button>
+
+            {isTemplateMenuOpen && (
+              <div className="template-select-menu" role="listbox" aria-label="Templates">
+                {templates.map((template) => {
+                  const isSelected = selectedKey === template.key;
+                  return (
+                    <button
+                      key={template.key}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`template-select-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleTemplateSelect(template.key)}
+                    >
+                      <span>
+                        <strong>{template.name}</strong>
+                        <small>{template.category} / {template.key}</small>
+                      </span>
+                      {isSelected && <Check size={15} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabbed Editor Modes */}
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', background: 'var(--bg-subsurface)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button onClick={() => { setMode('simple'); setCustomHtml(null); }} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', border: 'none', background: mode === 'simple' ? 'var(--bg-surface)' : 'transparent', color: mode === 'simple' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer', boxShadow: mode === 'simple' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.15s ease' }}>
+          <div className="template-mode-tabs">
+            <button className={`template-mode-tab ${mode === 'simple' ? 'active' : ''}`} onClick={() => { setMode('simple'); setCustomHtml(null); }}>
               <Layout size={14} /> Form
             </button>
-            <button onClick={() => setMode('ai')} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', border: 'none', background: mode === 'ai' ? 'var(--bg-surface)' : 'transparent', color: mode === 'ai' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer', boxShadow: mode === 'ai' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.15s ease' }}>
+            <button className={`template-mode-tab ${mode === 'ai' ? 'active' : ''}`} onClick={() => setMode('ai')}>
               <Sparkles size={14} /> AI
             </button>
-            <button onClick={() => { if (customHtml === null) setCustomHtml(generateCompiledHtml()); setMode('code'); }} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '6px', border: 'none', background: mode === 'code' ? 'var(--bg-surface)' : 'transparent', color: mode === 'code' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer', boxShadow: mode === 'code' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.15s ease' }}>
+            <button className={`template-mode-tab ${mode === 'code' ? 'active' : ''}`} onClick={() => { if (customHtml === null) setCustomHtml(generateCompiledHtml()); setMode('code'); }}>
               <Code size={14} /> Code
             </button>
           </div>
@@ -439,7 +525,17 @@ ${footerHtml}
           )}
 
           {mode === 'code' && (
-            <textarea value={getActiveHtml()} onChange={(e) => setCustomHtml(e.target.value)} className="ui-input" style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', background: 'var(--bg-subsurface)', resize: 'none', border: '1px solid var(--border-color)', outline: 'none', minHeight: '400px' }} spellCheck={false} />
+            <div className="template-code-editor" aria-label="HTML code editor">
+              <div className="template-code-lines" aria-hidden="true">
+                {editorLineNumbers.map((line) => <span key={line}>{line}</span>)}
+              </div>
+              <textarea
+                value={editorHtml}
+                onChange={(e) => setCustomHtml(e.target.value)}
+                spellCheck={false}
+                style={{ height: `${Math.max(520, editorLineNumbers.length * 21)}px` }}
+              />
+            </div>
           )}
 
         </div>
@@ -447,34 +543,31 @@ ${footerHtml}
 
       {/* CENTER STAGE (CANVAS) */}
       <div className="template-preview-stage">
+        <div className="template-preview-header">
+          <div>
+            <span className="screen-kicker"><Eye size={14} /> Live rendering</span>
+            <h3>{subject || 'Untitled subject'}</h3>
+          </div>
+          <div className="template-preview-switch">
+            <button type="button" onClick={() => setPreviewMode('desktop')} className={previewMode === 'desktop' ? 'active' : ''}>
+              <Monitor size={14} /> Desktop
+            </button>
+            <button type="button" onClick={() => setPreviewMode('mobile')} className={previewMode === 'mobile' ? 'active' : ''}>
+              <Smartphone size={14} /> Mobile
+            </button>
+          </div>
+        </div>
         
-        {/* The Device/Browser Frame */}
-        <div className="template-device-frame" style={{
+        {/* Rendered email frame */}
+        <div className={`template-device-frame ${previewMode === 'mobile' ? 'mobile-preview-frame' : 'desktop-preview-frame'}`} style={{
           width: previewMode === 'desktop' ? '680px' : '340px',
           borderRadius: previewMode === 'desktop' ? '12px' : '36px',
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s ease',
+          transition: 'border-radius 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
           minHeight: 0
         }}>
-          {/* Faux Header (Browser or Mobile Notch) */}
-          {previewMode === 'desktop' ? (
-            <div style={{ height: '40px', background: 'var(--bg-subsurface)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#eab308' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#22c55e' }} />
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '6px', width: '200px', height: '24px' }} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ height: '30px', background: '#ffffff', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-              <div style={{ width: '120px', height: '24px', background: '#000000', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }} />
-            </div>
-          )}
-
-          {/* Rendered Output */}
           <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '10px', background: '#ffffff', overflowY: 'auto' }}>
              <div className={previewMode === 'mobile' ? 'email-mobile-preview' : undefined} dangerouslySetInnerHTML={{ __html: getRenderedPreview() }} />
           </div>
@@ -482,44 +575,41 @@ ${footerHtml}
 
       </div>
 
-      {/* FLOATING ACTION BAR (Bottom Center) */}
-      <div className="template-action-bar" style={{
-        position: 'absolute',
-        bottom: '30px',
-        left: 'calc(50% + 190px)', // Offset by half the sidebar width
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        zIndex: 20
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-subsurface)', padding: '4px', borderRadius: '999px' }}>
-          <button onClick={() => setPreviewMode('desktop')} style={{ background: previewMode === 'desktop' ? '#ffffff' : 'transparent', color: previewMode === 'desktop' ? 'var(--text-main)' : 'var(--text-muted)', border: 'none', padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, boxShadow: previewMode === 'desktop' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.15s ease' }}>
-            <Monitor size={14} /> Desktop
-          </button>
-          <button onClick={() => setPreviewMode('mobile')} style={{ background: previewMode === 'mobile' ? '#ffffff' : 'transparent', color: previewMode === 'mobile' ? 'var(--text-main)' : 'var(--text-muted)', border: 'none', padding: '6px 12px', borderRadius: '999px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, boxShadow: previewMode === 'mobile' ? 'var(--shadow-sm)' : 'none', transition: 'all 0.15s ease' }}>
-            <Smartphone size={14} /> Mobile
-          </button>
+      <aside className="template-inspector-panel" aria-label="Template inspector">
+        <div className="template-inspector-block">
+          <div className="template-inspector-row head">
+            <span>Template meta</span>
+            <strong>{activeTemplate?.key || selectedKey}</strong>
+          </div>
+          <div className="template-inspector-row">
+            <span>Mode</span>
+            <strong>{mode === 'simple' ? 'Form' : mode === 'ai' ? 'AI draft' : 'Code'}</strong>
+          </div>
+          <div className="template-inspector-row">
+            <span><Braces size={14} /> Variables</span>
+            <div className="template-token-list">
+              {templateVariables.map((variable) => <code key={variable}>{`{{${variable}}}`}</code>)}
+            </div>
+          </div>
+          <div className="template-inspector-row preflight">
+            <span><ShieldCheck size={14} /> Preflight</span>
+            <ul className="template-check-list">
+              {readinessItems.map((item) => (
+                <li key={item.label} className={item.state}>
+                  {item.state === 'pass' ? <Check size={14} /> : item.state === 'warn' ? <AlertTriangle size={14} /> : <XCircle size={14} />}
+                  <span>{item.label}</span>
+                  <small>{item.detail}</small>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-
-        <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-
-        <button onClick={() => setShowSampleData(!showSampleData)} style={{ background: 'transparent', border: 'none', color: showSampleData ? 'var(--secondary)' : 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Layers size={14} /> {showSampleData ? 'Real Data' : 'Raw Variables'}
-        </button>
-
-        <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-
-        <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '999px', fontSize: '0.8125rem' }}>
-          {saveSuccess ? <Check size={14} /> : <Save size={14} />}
-          {saveSuccess ? 'Saved' : 'Save Template'}
-        </button>
-      </div>
+      </aside>
 
       {/* Create Modal */}
       {showCreateModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '100%', maxWidth: '440px', background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)' }}>
+          <div style={{ width: '100%', maxWidth: '440px', background: '#FFFFFC', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxShadow: 'var(--shadow-dropdown)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Create Template</h3>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'var(--bg-subsurface)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={16} /></button>

@@ -108,11 +108,22 @@ export interface CampaignJobStats {
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : 'http://localhost:5050/v1';
+const REQUEST_TIMEOUT_MS = 5000;
+
+const fetchWithTimeout = async (url: string, init: RequestInit = {}) => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+};
 
 export class ApiService {
   static async getCampaignJobStats(campaignId: string): Promise<CampaignJobStats> {
     try {
-      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/jobs`);
+      const res = await fetchWithTimeout(`${API_BASE}/campaigns/${campaignId}/jobs`);
       if (res.ok) {
         const data = await res.json();
         if (data?.stats) return data.stats;
@@ -125,7 +136,7 @@ export class ApiService {
 
   static async getMetrics(): Promise<MetricCardData[]> {
     try {
-      const res = await fetch(`${API_BASE}/dashboard/stats`);
+      const res = await fetchWithTimeout(`${API_BASE}/dashboard/stats`);
       if (res.ok) {
         const data = await res.json();
         if (data.metrics) return data.metrics;
@@ -138,7 +149,7 @@ export class ApiService {
 
   static async getQueueJobs(): Promise<QueueJob[]> {
     try {
-      const res = await fetch(`${API_BASE}/dashboard/stats`);
+      const res = await fetchWithTimeout(`${API_BASE}/dashboard/stats`);
       if (res.ok) {
         const data = await res.json();
         if (data.queueJobs) return data.queueJobs;
@@ -151,7 +162,7 @@ export class ApiService {
 
   static async getActivityLogs(): Promise<ActivityLog[]> {
     try {
-      const res = await fetch(`${API_BASE}/dashboard/stats`);
+      const res = await fetchWithTimeout(`${API_BASE}/dashboard/stats`);
       if (res.ok) {
         const data = await res.json();
         if (data.logs) return data.logs;
@@ -164,7 +175,7 @@ export class ApiService {
 
   static async getProjectLogs(): Promise<Record<string, ActivityLog[]>> {
     try {
-      const res = await fetch(`${API_BASE}/logs/by-project`);
+      const res = await fetchWithTimeout(`${API_BASE}/logs/by-project`);
       if (res.ok) {
         const data = await res.json();
         if (data.projects) return data.projects;
@@ -177,7 +188,7 @@ export class ApiService {
 
   static async getTemplates(): Promise<Template[]> {
     try {
-      const res = await fetch(`${API_BASE}/templates`);
+      const res = await fetchWithTimeout(`${API_BASE}/templates`);
       if (res.ok) {
         const data = await res.json();
         if (data.templates) return data.templates;
@@ -190,7 +201,7 @@ export class ApiService {
 
   static async saveTemplate(data: { key: string; name?: string; category?: string; html: string; subject: string }): Promise<boolean> {
     try {
-      const res = await fetch(`${API_BASE}/templates`, {
+      const res = await fetchWithTimeout(`${API_BASE}/templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -204,7 +215,7 @@ export class ApiService {
 
   static async getCampaigns(): Promise<Campaign[]> {
     try {
-      const res = await fetch(`${API_BASE}/campaigns`);
+      const res = await fetchWithTimeout(`${API_BASE}/campaigns`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data?.campaigns)) return data.campaigns;
@@ -222,7 +233,7 @@ export class ApiService {
     scheduledAt?: string
   ): Promise<BroadcastResult> {
     try {
-      const res = await fetch(`${API_BASE}/broadcast`, {
+      const res = await fetchWithTimeout(`${API_BASE}/broadcast`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +273,7 @@ export class ApiService {
 
   static async getSuppressions(): Promise<SuppressionItem[]> {
     try {
-      const res = await fetch(`${API_BASE}/suppressions`);
+      const res = await fetchWithTimeout(`${API_BASE}/suppressions`);
       if (res.ok) {
         const data = await res.json();
         if (data.suppressions) return data.suppressions;
@@ -275,7 +286,7 @@ export class ApiService {
 
   static async getGetAIPilotUsers(): Promise<GetAIPilotUser[]> {
     try {
-      const response = await fetch(`${API_BASE}/getaipilot/users`);
+      const response = await fetchWithTimeout(`${API_BASE}/getaipilot/users`);
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data?.users) && data.users.length > 0) return data.users;

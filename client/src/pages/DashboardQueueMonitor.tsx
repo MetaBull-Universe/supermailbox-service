@@ -54,14 +54,14 @@ const fallbackTypeData = [
 ];
 
 const statusColors: Record<string, string> = {
-  Delivered: '#769181',
-  Sent: '#89A595',
-  Queued: '#F1E9D8',
-  Bounced: '#D96767',
-  Failed: '#D96767',
+  Delivered: '#24754E',
+  Sent: '#0D4F3C',
+  Queued: '#F5E6C8',
+  Bounced: '#A43A32',
+  Failed: '#A43A32',
 };
 
-const pieColors = ['#769181', '#89A595', '#DFE9E3', '#F1E9D8'];
+const pieColors = ['#0D4F3C', '#24754E', '#DDECE4', '#F5E6C8'];
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
 
@@ -273,16 +273,16 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
               <AreaChart data={analytics.trendData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="volumeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#769181" stopOpacity={0.34} />
-                    <stop offset="95%" stopColor="#769181" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#0D4F3C" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0D4F3C" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#777C78' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#777C78' }} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E3E3DE' }} />
-                <Area type="monotone" dataKey="volume" stroke="#5A7163" strokeWidth={3} fill="url(#volumeFill)" />
-                <Line type="monotone" dataKey="delivered" stroke="#89A595" strokeWidth={3} dot={{ r: 3, fill: '#89A595' }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#676D63' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#676D63' }} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #D9D6CD' }} />
+                <Area type="monotone" dataKey="volume" stroke="#0D4F3C" strokeWidth={3} fill="url(#volumeFill)" />
+                <Line type="monotone" dataKey="delivered" stroke="#24754E" strokeWidth={3} dot={{ r: 3, fill: '#24754E' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -333,10 +333,10 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
             <ResponsiveContainer>
               <BarChart data={analytics.providerData} margin={{ top: 8, right: 0, left: -22, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#777C78' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#777C78' }} />
-                <Tooltip cursor={{ fill: '#F6F7F5' }} contentStyle={{ borderRadius: 8, border: '1px solid #E3E3DE' }} />
-                <Bar dataKey="value" fill="#769181" radius={[6, 6, 0, 0]} barSize={34} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#676D63' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#676D63' }} />
+                <Tooltip cursor={{ fill: '#F8F8F6' }} contentStyle={{ borderRadius: 8, border: '1px solid #D9D6CD' }} />
+                <Bar dataKey="value" fill="#0D4F3C" radius={[6, 6, 0, 0]} barSize={34} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -357,7 +357,7 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                     <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E3E3DE' }} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #D9D6CD' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="dashboard-donut-legend">
@@ -383,11 +383,11 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
             {analytics.statusData.map((item) => (
               <div key={item.name}>
                 <span>
-                  <b style={{ background: statusColors[item.name] ?? '#777C78' }} />
+                  <b style={{ background: statusColors[item.name] ?? '#676D63' }} />
                   {item.name}
                 </span>
                 <strong>{item.value}</strong>
-                <i style={{ width: `${Math.min(100, Number(item.value) * 3)}%`, background: statusColors[item.name] ?? '#777C78' }} />
+                <i style={{ width: `${Math.min(100, Number(item.value) * 3)}%`, background: statusColors[item.name] ?? '#676D63' }} />
               </div>
             ))}
           </div>
