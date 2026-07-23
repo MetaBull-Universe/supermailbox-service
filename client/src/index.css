@@ -3389,3 +3389,120 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Suppression Details Popup Modal
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.suppression-details-card {
+  position: relative;
+  width: 90%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 32px 36px 36px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+  color: #1f2937;
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.suppression-details-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.suppression-details-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.suppression-details-title {
+  margin: 0 0 28px 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.suppression-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.suppression-details-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.93rem;
+  line-height: 1.5;
+}
+
+.suppression-details-label {
+  color: #374151;
+  font-weight: 600;
+  min-width: 150px;
+}
+
+.suppression-details-value {
+  color: #111827;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.suppression-category-badge {
+  display: inline-block;
+  background: #0070f3;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.01em;
+}
+
+.suppression-table-row {
+  transition: background 0.15s ease;
+}
+
+.suppression-table-row:hover {
+  background: rgba(0, 112, 243, 0.04) !important;
+}
+

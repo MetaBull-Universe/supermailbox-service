@@ -134,15 +134,13 @@ export async function syncSuppressionsFromWebhookLogs(limit = 500): Promise<numb
   let synced = 0;
   for (const log of logs || []) {
     for (const event of normalizeZeptoWebhookPayload(log.raw_payload)) {
-      const shouldSuppress =
-        event.status === 'complained' ||
-        (event.status === 'bounced' && event.bounceKind !== 'soft');
+      const shouldSuppress = event.status === 'complained';
 
       if (!shouldSuppress) continue;
 
       for (const email of event.emails) {
         if (isZeptoSampleEmail(email)) continue;
-        const saved = await addSuppression(email, event.status === 'complained' ? 'complaint' : 'bounce');
+        const saved = await addSuppression(email, 'complaint');
         if (saved) synced++;
       }
     }
@@ -174,16 +172,15 @@ export async function registerWebhookRoutes(fastify: FastifyInstance) {
       const normalizedStatus = event.status;
       const messageId = event.messageId;
 
-      // 3. Auto-suppress bounce or complaint (Step 10)
-      const shouldSuppress =
-        normalizedStatus === 'complained' ||
-        (normalizedStatus === 'bounced' && event.bounceKind !== 'soft');
+      // 3. Auto-suppress complaints. Hard bounces stay as bounce reports unless Zepto's
+      // real suppression list or a manual admin action marks them suppressed.
+      const shouldSuppress = normalizedStatus === 'complained';
 
       if (shouldSuppress) {
         for (const email of event.emails) {
           if (isZeptoSampleEmail(email)) continue;
           console.log(`[Webhook Auto-Suppression] Suppressing ${email} due to ${normalizedStatus}`);
-          await addSuppression(email, normalizedStatus === 'complained' ? 'complaint' : 'bounce');
+          await addSuppression(email, 'complaint');
         }
       }
 

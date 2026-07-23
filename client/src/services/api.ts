@@ -61,9 +61,13 @@ export interface Campaign {
 export interface SuppressionItem {
   id: string;
   email: string;
-  reason: 'bounce' | 'complaint' | 'unsubscribe' | 'manual';
+  reason: 'bounce' | 'complaint' | 'unsubscribe' | 'manual' | string;
   dateAdded: string;
   linkedIdentities?: string[];
+  type?: string;
+  associatedAgent?: string;
+  category?: string;
+  description?: string;
 }
 
 export interface BounceReportItem {
@@ -297,10 +301,13 @@ export class ApiService {
         const data = await res.json();
         if (data.suppression) return data.suppression;
       }
+
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `Suppression add failed with ${res.status}`);
     } catch (err) {
       console.warn('API addSuppression failed:', err);
+      throw err;
     }
-    return null;
   }
 
   static async removeSuppression(id: string): Promise<boolean> {
@@ -308,10 +315,13 @@ export class ApiService {
       const res = await fetch(`${API_BASE}/suppressions/${id}`, {
         method: 'DELETE'
       });
-      return res.ok;
+      if (res.ok) return true;
+
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `Suppression remove failed with ${res.status}`);
     } catch (err) {
       console.warn('API removeSuppression failed:', err);
-      return false;
+      throw err;
     }
   }
 

@@ -105,16 +105,24 @@ export const App: React.FC = () => {
   };
 
   const handleAddSuppression = async (email: string, reason: SuppressionItem['reason']) => {
-    const savedItem = await ApiService.addSuppression(email, reason);
-    if (savedItem) {
-      setSuppressions((prev) => [savedItem, ...prev.filter((item) => item.id !== savedItem.id)]);
+    try {
+      const savedItem = await ApiService.addSuppression(email, reason);
+      if (savedItem) {
+        setSuppressions((prev) => [savedItem, ...prev.filter((item) => item.id !== savedItem.id)]);
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Unable to add suppression');
     }
   };
 
   const handleRemoveSuppression = async (id: string) => {
-    const removed = await ApiService.removeSuppression(id);
-    if (removed) {
-      setSuppressions((prev) => prev.filter((s) => s.id !== id));
+    try {
+      const removed = await ApiService.removeSuppression(id);
+      if (removed) {
+        setSuppressions((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Unable to remove suppression');
     }
   };
 

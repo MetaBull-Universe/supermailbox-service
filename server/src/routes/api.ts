@@ -4,7 +4,6 @@ import { campaignQueue, transactionalQueue } from '../queues/campaignQueue.js';
 import { addResponsiveEmailFixes } from '../services/responsiveEmail.js';
 import { fetchGetAiPilotUsers } from '../services/getaipilotUsers.js';
 import { addSuppression, removeSuppression } from '../services/suppression.js';
-import { syncSuppressionsFromWebhookLogs } from './webhooks.js';
 
 const normalizeProjectCode = (value?: string | null) => {
   if (!value) return 'unknown';
@@ -41,9 +40,248 @@ const formatSuppression = (s: any) => ({
   id: s.id,
   email: s.email,
   reason: s.reason,
-  dateAdded: new Date(s.created_at).toISOString().replace('T', ' ').substring(0, 16),
-  linkedIdentities: []
+  dateAdded: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
+  linkedIdentities: [],
+  type: s.type || 'Sending',
+  associatedAgent: s.associated_agent || 'Metabull',
+  category: s.category || (s.reason === 'manual' ? 'Manual' : s.reason === 'bounce' ? 'Bounce' : s.reason === 'complaint' ? 'Spam' : 'Opt-out'),
+  description: s.description || `Added from SuperMailBox: ${s.reason || 'manual'}`
 });
+
+const listLocalSuppressions = async () => {
+  const { data: suppressions, error } = await supabase
+    .from('suppression_list')
+    .select('id, email, reason, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (suppressions || []).map(formatSuppression);
+};
+
+const getZeptoApiBaseUrl = () => {
+  const configuredUrl = process.env.ZEPTOMAIL_SUPPRESSIONS_URL || process.env.ZEPTOMAIL_URL || 'https://api.zeptomail.in/v1.1/email';
+  return configuredUrl.replace(/\/v1\.1\/email\/?$/, '/v1.1').replace(/\/$/, '');
+};
+
+let cachedZeptoOAuthToken: { token: string; expiresAt: number } | null = null;
+
+const getZohoAccountsBaseUrl = () => (process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.in').replace(/\/$/, '');
+
+const refreshZeptoOAuthToken = async () => {
+  const refreshToken = process.env.ZEPTOMAIL_REFRESH_TOKEN || process.env.ZEPTO_REFRESH_TOKEN;
+  const clientId = process.env.ZOHO_CLIENT_ID || process.env.ZEPTOMAIL_CLIENT_ID;
+  const clientSecret = process.env.ZOHO_CLIENT_SECRET || process.env.ZEPTOMAIL_CLIENT_SECRET;
+
+  if (!refreshToken || !clientId || !clientSecret) return null;
+  if (cachedZeptoOAuthToken && Date.now() < cachedZeptoOAuthToken.expiresAt) {
+    return cachedZeptoOAuthToken.token;
+  }
+
+  const params = new URLSearchParams({
+    refresh_token: refreshToken,
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: 'refresh_token'
+  });
+
+  const response = await fetch(`${getZohoAccountsBaseUrl()}/oauth/v2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.access_token) {
+    throw new Error(`Zoho OAuth refresh failed (${response.status}): ${JSON.stringify(payload)}`);
+  }
+
+  cachedZeptoOAuthToken = {
+    token: payload.access_token,
+    expiresAt: Date.now() + Math.max(Number(payload.expires_in || 3600) - 120, 60) * 1000
+  };
+
+  return cachedZeptoOAuthToken.token;
+};
+
+const getZeptoSuppressionAuthHeader = async () => {
+  const refreshedToken = await refreshZeptoOAuthToken();
+  const oauthToken = refreshedToken || process.env.ZEPTOMAIL_OAUTH_TOKEN || process.env.ZEPTO_OAUTH_TOKEN;
+  if (oauthToken) {
+    return oauthToken.startsWith('Zoho-oauthtoken') ? oauthToken : `Zoho-oauthtoken ${oauthToken}`;
+  }
+
+  const apiKey = process.env.ZEPTOMAIL_SUPPRESSIONS_API_KEY;
+  if (!apiKey) return null;
+  return apiKey.startsWith('Zoho-enczapikey') ? apiKey : `Zoho-enczapikey ${apiKey}`;
+};
+
+const normalizeZeptoSuppressionEntry = (entry: any, fallbackIndex: number) => {
+  const email = String(
+    entry.email ||
+    entry.value ||
+    entry.values?.[0] ||
+    entry.address ||
+    entry.email_address ||
+    ''
+  ).toLowerCase().trim();
+
+  if (!email || !email.includes('@')) return null;
+
+  const categoryText = String(entry.category || entry.reason || entry.description || '').toLowerCase();
+  const reason =
+    categoryText.includes('complaint') || categoryText.includes('spam') ? 'complaint' :
+    categoryText.includes('unsubscribe') || categoryText.includes('opt') ? 'unsubscribe' :
+    categoryText.includes('manual') ? 'manual' :
+    'bounce';
+
+  const createdAt =
+    entry.created_at ||
+    entry.createdTime ||
+    entry.created_time ||
+    entry.modified_at ||
+    entry.modifiedTime ||
+    entry.modified_time ||
+    new Date().toISOString();
+
+  const rawCategory = entry.category || (reason === 'manual' ? 'Manual' : reason === 'bounce' ? 'Bounce' : reason === 'complaint' ? 'Spam' : 'Opt-out');
+  const rawDescription = entry.description || `Added from SuperMailBox: ${reason}`;
+
+  return {
+    id: `zepto_${entry.id || entry.zoid || entry.mailagent_key || fallbackIndex}_${email}`,
+    email,
+    reason,
+    dateAdded: new Date(createdAt).toISOString(),
+    linkedIdentities: [],
+    type: entry.suppression_type || entry.type || 'Sending',
+    associatedAgent: entry.associated_agent || 'Metabull',
+    category: String(rawCategory).charAt(0).toUpperCase() + String(rawCategory).slice(1),
+    description: rawDescription
+  };
+};
+
+const extractZeptoSuppressionEntries = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.suppressions)) return payload.data.suppressions;
+  if (Array.isArray(payload?.data?.values)) return payload.data.values;
+  if (Array.isArray(payload?.suppressions)) return payload.suppressions;
+  if (Array.isArray(payload?.values)) return payload.values.map((value: string) => ({ value }));
+  return [];
+};
+
+const fetchZeptoSuppressions = async () => {
+  const authHeader = await getZeptoSuppressionAuthHeader();
+  if (!authHeader) return null;
+
+  const params = new URLSearchParams({ limit: '500', offset: '0' });
+  const mailAgentKey = process.env.ZEPTOMAIL_MAIL_AGENT_KEY || process.env.ZEPTOMAIL_AGENT_KEY;
+  if (mailAgentKey) params.set('mailagent_key', mailAgentKey);
+
+  const response = await fetch(`${getZeptoApiBaseUrl()}/suppressions/email?${params.toString()}`, {
+    headers: {
+      Authorization: authHeader,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`ZeptoMail suppression sync failed (${response.status}): ${detail}`);
+  }
+
+  const payload = await response.json();
+  return extractZeptoSuppressionEntries(payload)
+    .map(normalizeZeptoSuppressionEntry)
+    .filter(Boolean);
+};
+
+const getZeptoMailAgentKeys = () => {
+  const mailAgentKey = process.env.ZEPTOMAIL_MAIL_AGENT_KEY || process.env.ZEPTOMAIL_AGENT_KEY;
+  return mailAgentKey ? [mailAgentKey] : [];
+};
+
+const addZeptoSuppression = async (email: string, reason: string) => {
+  const authHeader = await getZeptoSuppressionAuthHeader();
+  if (!authHeader) {
+    throw new Error('ZEPTOMAIL_OAUTH_TOKEN or ZEPTOMAIL_REFRESH_TOKEN is required to add suppressions in ZeptoMail.');
+  }
+
+  const payload: Record<string, any> = {
+    action: 'suppress',
+    values: [email],
+    description: reason === 'manual' ? 'Added from SuperMailBox audience tab' : `Added from SuperMailBox: ${reason}`
+  };
+
+  const mailAgentKeys = getZeptoMailAgentKeys();
+  if (mailAgentKeys.length > 0) {
+    payload.mailagent_keys = mailAgentKeys;
+  }
+
+  const response = await fetch(`${getZeptoApiBaseUrl()}/suppressions/email`, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (response.ok) return;
+
+  const detail = await response.text();
+  if (response.status === 409 || detail.includes('DND_101')) return;
+  throw new Error(`ZeptoMail add suppression failed (${response.status}): ${detail}`);
+};
+
+const deleteZeptoSuppression = async (email: string) => {
+  const authHeader = await getZeptoSuppressionAuthHeader();
+  if (!authHeader) {
+    throw new Error('ZEPTOMAIL_OAUTH_TOKEN or ZEPTOMAIL_REFRESH_TOKEN is required to remove suppressions in ZeptoMail.');
+  }
+
+  const response = await fetch(`${getZeptoApiBaseUrl()}/suppressions/email`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: authHeader,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ values: [email] })
+  });
+
+  if (response.ok || response.status === 204) return;
+
+  const detail = await response.text();
+  if (response.status === 404 || detail.includes('DND_102')) return;
+  throw new Error(`ZeptoMail remove suppression failed (${response.status}): ${detail}`);
+};
+
+const syncLocalSuppressionsToZepto = async (zeptoSuppressions: any[]) => {
+  const liveEmails = new Set(zeptoSuppressions.map((item) => item.email));
+
+  await Promise.all(
+    zeptoSuppressions.map((item) => addSuppression(item.email, item.reason))
+  );
+
+  const { data: localSuppressions, error } = await supabase
+    .from('suppression_list')
+    .select('id, email')
+    .is('product_id', null);
+
+  if (error) throw error;
+
+  const staleIds = (localSuppressions || [])
+    .filter((item: any) => !liveEmails.has(String(item.email).toLowerCase().trim()))
+    .map((item: any) => item.id);
+
+  if (staleIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('suppression_list')
+      .delete()
+      .in('id', staleIds);
+
+    if (deleteError) throw deleteError;
+  }
+};
 
 const parseZeptoExportDate = (value?: string | null) => {
   if (!value) return new Date().toISOString();
@@ -223,18 +461,20 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
   // ==========================
   fastify.get('/v1/suppressions', async (_request, reply) => {
     try {
-      await syncSuppressionsFromWebhookLogs();
+      try {
+        const zeptoSuppressions = await fetchZeptoSuppressions();
+        if (zeptoSuppressions) {
+          await syncLocalSuppressionsToZepto(zeptoSuppressions);
+          const formatted = await listLocalSuppressions();
+          return reply.send({ success: true, suppressions: formatted, source: 'zeptomail' });
+        }
+      } catch (syncErr: any) {
+        fastify.log.warn(`[Suppressions] ZeptoMail sync skipped: ${syncErr.message}`);
+      }
 
-      const { data: suppressions, error } = await supabase
-        .from('suppression_list')
-        .select('id, email, reason, created_at')
-        .order('created_at', { ascending: false });
+      const formatted = await listLocalSuppressions();
 
-      if (error) throw error;
-
-      const formatted = (suppressions || []).map(formatSuppression);
-
-      return reply.send({ success: true, suppressions: formatted });
+      return reply.send({ success: true, suppressions: formatted, source: 'local' });
     } catch (err: any) {
       fastify.log.error(err);
       return reply.status(500).send({ success: false, error: err.message });
@@ -248,12 +488,15 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: 'Email is required' });
       }
 
-      const suppression = await addSuppression(email, reason || 'manual');
+      const normalizedEmail = String(email).toLowerCase().trim();
+      await addZeptoSuppression(normalizedEmail, reason || 'manual');
+
+      const suppression = await addSuppression(normalizedEmail, reason || 'manual');
       if (!suppression) {
         return reply.status(500).send({ success: false, error: 'Unable to save suppression entry' });
       }
 
-      return reply.send({ success: true, suppression: formatSuppression(suppression) });
+      return reply.send({ success: true, suppression: formatSuppression(suppression), syncedToZepto: true });
     } catch (err: any) {
       fastify.log.error(err);
       return reply.status(500).send({ success: false, error: err.message });
@@ -262,12 +505,25 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
 
   fastify.delete('/v1/suppressions/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
+      const { data: existing, error: lookupError } = await supabase
+        .from('suppression_list')
+        .select('email')
+        .eq('id', request.params.id)
+        .single();
+
+      if (lookupError) throw lookupError;
+      if (!existing?.email) {
+        return reply.status(404).send({ success: false, error: 'Suppression entry not found' });
+      }
+
+      await deleteZeptoSuppression(String(existing.email).toLowerCase().trim());
+
       const deleted = await removeSuppression(request.params.id);
       if (!deleted) {
         return reply.status(500).send({ success: false, error: 'Unable to remove suppression entry' });
       }
 
-      return reply.send({ success: true });
+      return reply.send({ success: true, syncedToZepto: true });
     } catch (err: any) {
       fastify.log.error(err);
       return reply.status(500).send({ success: false, error: err.message });
@@ -341,12 +597,6 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
       });
 
       if (error) throw error;
-
-      for (const record of normalizedRecords) {
-        if (record.bounceType === 'hard') {
-          await addSuppression(record.email, 'bounce');
-        }
-      }
 
       return reply.send({ success: true, imported: normalizedRecords.length });
     } catch (err: any) {
