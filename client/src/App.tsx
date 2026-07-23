@@ -6,7 +6,7 @@ import { TemplateBuilder } from './pages/TemplateBuilder';
 import { SegmentBuilder } from './pages/SegmentBuilder';
 import { SuppressionManager } from './pages/SuppressionManager';
 import { ApiService } from './services/api';
-import type { MetricCardData, QueueJob, ActivityLog, Template, Campaign, SuppressionItem } from './services/api';
+import type { MetricCardData, QueueJob, ActivityLog, Template, Campaign, SuppressionItem, BounceReportItem } from './services/api';
 import './App.css';
 
 export const App: React.FC = () => {
@@ -20,18 +20,20 @@ export const App: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [suppressions, setSuppressions] = useState<SuppressionItem[]>([]);
+  const [bounceReports, setBounceReports] = useState<BounceReportItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [m, j, l, t, c, s] = await Promise.all([
+      const [m, j, l, t, c, s, b] = await Promise.all([
         ApiService.getMetrics(),
         ApiService.getQueueJobs(),
         ApiService.getActivityLogs(),
         ApiService.getTemplates(),
         ApiService.getCampaigns(),
         ApiService.getSuppressions(),
+        ApiService.getBounceReports(),
       ]);
       setMetrics(m);
       setJobs(j);
@@ -39,6 +41,7 @@ export const App: React.FC = () => {
       setTemplates(t);
       setCampaigns(c);
       setSuppressions(s);
+      setBounceReports(b);
     } catch (err) {
       console.error('Telemetry fetch error:', err);
     } finally {
@@ -101,19 +104,18 @@ export const App: React.FC = () => {
     setCampaigns([newCamp, ...campaigns]);
   };
 
-  const handleAddSuppression = (email: string, reason: SuppressionItem['reason']) => {
-    const newItem: SuppressionItem = {
-      id: `sup_${Math.random().toString(36).substring(7)}`,
-      email,
-      reason,
-      dateAdded: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      linkedIdentities: ['Manual Admin Addition']
-    };
-    setSuppressions([newItem, ...suppressions]);
+  const handleAddSuppression = async (email: string, reason: SuppressionItem['reason']) => {
+    const savedItem = await ApiService.addSuppression(email, reason);
+    if (savedItem) {
+      setSuppressions((prev) => [savedItem, ...prev.filter((item) => item.id !== savedItem.id)]);
+    }
   };
 
-  const handleRemoveSuppression = (id: string) => {
-    setSuppressions((prev) => prev.filter((s) => s.id !== id));
+  const handleRemoveSuppression = async (id: string) => {
+    const removed = await ApiService.removeSuppression(id);
+    if (removed) {
+      setSuppressions((prev) => prev.filter((s) => s.id !== id));
+    }
   };
 
   return (
@@ -167,6 +169,7 @@ export const App: React.FC = () => {
               {activeTab === 'contacts' && (
                 <SuppressionManager
                   suppressions={suppressions}
+                  bounceReports={bounceReports}
                   onAddSuppression={handleAddSuppression}
                   onRemoveSuppression={handleRemoveSuppression}
                 />
