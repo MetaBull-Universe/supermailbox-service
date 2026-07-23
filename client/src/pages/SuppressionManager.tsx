@@ -215,11 +215,11 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
 
   return (
     <div className="screen-page suppression-screen fade-in">
-      <div className="screen-hero suppression-hero">
+      <div className="screen-hero suppression-hero" style={{ background: '#ffffff url(/bg2.jpg) no-repeat center center', backgroundSize: 'cover' }}>
         <div>
-          <span className="screen-kicker"><ShieldAlert size={14} /> Reputation analytics</span>
-          <h2>Bounce and suppression reports</h2>
-          <p>Review soft bounces, hard bounces, and the contacts blocked from future sends.</p>
+          <span className="screen-kicker" style={{ color: '#60a5fa' }}><ShieldAlert size={14} /> Reputation analytics</span>
+          <h2 style={{ color: '#ffffff' }}>Bounce and suppression reports</h2>
+          <p style={{ color: 'rgba(255,255,255,0.85)' }}>Review soft bounces, hard bounces, and the contacts blocked from future sends.</p>
         </div>
 
         <button onClick={() => setIsModalOpen(true)} className="btn-primary">

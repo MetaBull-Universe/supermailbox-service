@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw, Mail, Clock, AlertCircle } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -239,16 +239,15 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   return (
     <div className="screen-page campaign-screen fade-in" style={{ backgroundColor: '#ffffff', width: '100%', maxWidth: '100%' }}>
-      <div className="screen-hero campaign-meta-hero">
+      <div className="screen-hero campaign-meta-hero" style={{ background: '#ffffff url(/bg2.jpg) no-repeat center center', backgroundSize: 'cover' }}>
         <div className="hero-content">
-          <span className="screen-kicker"><UsersRound size={14} /> AUDIENCE LAUNCHPAD</span>
-          <h2 style={{ fontSize: '32px', letterSpacing: '-0.5px' }}>
+          <span className="screen-kicker" style={{ color: '#60a5fa' }}><UsersRound size={14} /> AUDIENCE LAUNCHPAD</span>
+          <h2 style={{ fontSize: '32px', letterSpacing: '-0.5px', color: '#ffffff' }}>
             Campaigns & Segments
           </h2>
-          <p>Build precise audiences from your synced user list and launch queued email campaigns<br/>through SuperMailBox.</p>
+          <p style={{ color: 'rgba(255,255,255,0.85)' }}>Build precise audiences from your synced user list and launch queued email campaigns through SuperMailBox.</p>
         </div>
         <div className="hero-action-area">
-          <div className="hero-grid-bg"></div>
           <button onClick={() => setShowSettingsModal(true)} className="btn-secondary smtp-btn">
             <Settings size={14} /> SMTP Config
           </button>
@@ -284,7 +283,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
       {jobStats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total emails</span>
               <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', display: 'grid', placeItems: 'center' }}>
@@ -294,7 +293,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.queued + jobStats.sent + jobStats.failed + jobStats.suppressed}</div>
           </div>
           
-          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sent or delivered</span>
               <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#10b981', display: 'grid', placeItems: 'center' }}>
@@ -304,7 +303,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.sent}</div>
           </div>
           
-          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queued</span>
               <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#f59e0b', display: 'grid', placeItems: 'center' }}>
@@ -314,7 +313,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.queued}</div>
           </div>
           
-          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Failed or bounced</span>
               <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#ef4444', display: 'grid', placeItems: 'center' }}>

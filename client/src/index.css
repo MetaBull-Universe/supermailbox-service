@@ -2879,7 +2879,8 @@ th {
 }
 /* Meta Campaign UI Overrides */
 .campaign-meta-hero {
-  background: var(--surface);
+  background: #ffffff url('/bg.png') no-repeat right top;
+  background-size: auto 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px;

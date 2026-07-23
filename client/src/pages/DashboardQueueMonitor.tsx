@@ -212,7 +212,7 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
 
   return (
     <div className="dashboard-command-center fade-in">
-      <section className="dashboard-command-hero">
+      <section className="dashboard-command-hero" style={{ background: '#ffffff url(/bg2.jpg) no-repeat center center', backgroundSize: 'cover' }}>
         <div className="dashboard-hero-copy">
           <span className="dashboard-kicker">
             <Sparkles size={16} />
