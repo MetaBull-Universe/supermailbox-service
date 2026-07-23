@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw, Mail, Clock, AlertCircle } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -29,7 +29,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [broadcastSuccessMessage, setBroadcastSuccessMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [providerUsed, setProviderUsed] = useState<string | null>(null);
-  const [, setJobStats] = useState<any | null>(null);
+  const [jobStats, setJobStats] = useState<any | null>(null);
   const [customTestEmail, setCustomTestEmail] = useState('');
   const [showAddEmailModal, setShowAddEmailModal] = useState(false);
 
@@ -238,28 +238,30 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   };
 
   return (
-    <div className="screen-page campaign-screen fade-in">
-      <div className="screen-hero">
-        <div>
-          <span className="screen-kicker"><UsersRound size={14} /> Audience launchpad</span>
-          <h2>
+    <div className="screen-page campaign-screen fade-in" style={{ backgroundColor: '#ffffff', width: '100%', maxWidth: '100%' }}>
+      <div className="screen-hero campaign-meta-hero" style={{ background: '#ffffff url(/bg2.jpg) no-repeat center center', backgroundSize: 'cover' }}>
+        <div className="hero-content">
+          <span className="screen-kicker" style={{ color: '#60a5fa' }}><UsersRound size={14} /> AUDIENCE LAUNCHPAD</span>
+          <h2 style={{ fontSize: '32px', letterSpacing: '-0.5px', color: '#ffffff' }}>
             Campaigns & Segments
           </h2>
-          <p>Build precise audiences from your synced user list and launch queued email campaigns through SuperMailBox.</p>
+          <p style={{ color: 'rgba(255,255,255,0.85)' }}>Build precise audiences from your synced user list and launch queued email campaigns through SuperMailBox.</p>
         </div>
-        <button onClick={() => setShowSettingsModal(true)} className="btn-secondary">
-          <Settings size={16} /> SMTP Config
-        </button>
+        <div className="hero-action-area">
+          <button onClick={() => setShowSettingsModal(true)} className="btn-secondary smtp-btn">
+            <Settings size={14} /> SMTP Config
+          </button>
+        </div>
       </div>
 
       {settingsSavedMessage && (
-        <div style={{ background: 'var(--tertiary-light)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--tertiary)', fontWeight: 500, fontSize: '0.875rem', marginBottom: '24px' }}>
+        <div style={{ background: 'var(--success-light)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--success)', fontWeight: 500, fontSize: '0.875rem', marginBottom: '24px' }}>
           ✓ SMTP Provider settings updated successfully.
         </div>
       )}
 
       {broadcastSuccessMessage && (
-        <div className="glass-panel" style={{ padding: '20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid var(--primary)' }}>
+        <div className="glass-panel" style={{ padding: '20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <CheckCircle2 size={24} color="var(--primary)" />
             <div>
@@ -279,16 +281,60 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         </div>
       )}
 
+      {jobStats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total emails</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', display: 'grid', placeItems: 'center' }}>
+                <Mail size={16} color="var(--text-secondary)" />
+              </div>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.queued + jobStats.sent + jobStats.failed + jobStats.suppressed}</div>
+          </div>
+          
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sent or delivered</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#10b981', display: 'grid', placeItems: 'center' }}>
+                <CheckCircle2 size={16} color="#ffffff" />
+              </div>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.sent}</div>
+          </div>
+          
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queued</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#f59e0b', display: 'grid', placeItems: 'center' }}>
+                <Clock size={16} color="#ffffff" />
+              </div>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.queued}</div>
+          </div>
+          
+          <div style={{ background: '#F5F1EC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Failed or bounced</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#ef4444', display: 'grid', placeItems: 'center' }}>
+                <AlertCircle size={16} color="#ffffff" />
+              </div>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--ink)' }}>{jobStats.failed + jobStats.suppressed}</div>
+          </div>
+        </div>
+      )}
+
       {/* TWO COLUMN LAYOUT */}
       <div className="campaign-layout">
         
         {/* LEFT COLUMN: Configuration */}
         <div className="campaign-left">
           
-          <div className="screen-panel campaign-audience-panel">
+          <div className="screen-panel campaign-audience-panel" style={{ borderTop: 'none', borderRadius: 'var(--radius-lg)', background: 'var(--surface)', padding: '24px', border: '1px solid var(--border)' }}>
             <div className="campaign-panel-title">
-              <span>Segment controls</span>
-              <h3>Target Audience</h3>
+              <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>SEGMENT CONTROLS</span>
+              <h3 style={{ fontSize: '1.2rem', letterSpacing: '-0.5px' }}>Target Audience</h3>
             </div>
             
             <div className="campaign-segment-grid">
@@ -302,22 +348,27 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                   key={segment.mode}
                   onClick={() => setFilterMode(segment.mode as SegmentFilterMode)}
                   className={`campaign-segment-card ${filterMode === segment.mode ? 'active' : ''}`}
+                  aria-pressed={filterMode === segment.mode}
+                  style={{ position: 'relative' }}
                 >
-                  <span>{segment.label}</span>
+                  <span style={{ display: 'block', marginBottom: '12px', fontSize: '0.85rem' }}>{segment.label}</span>
                   <strong>{segment.count}</strong>
+                  {filterMode === segment.mode && (
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }} />
+                  )}
                 </button>
               ))}
             </div>
 
             <div className="campaign-toolbar">
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={selectVisible} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Select Visible</button>
-                <button onClick={deselectAll} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Clear All</button>
-                <button onClick={() => setShowAddEmailModal(true)} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                  <Plus size={14} style={{ marginRight: '4px' }} /> Add Email
+              <div className="campaign-toolbar-actions">
+                <button onClick={selectVisible} className="meta-toolbar-btn">Select Visible</button>
+                <button onClick={deselectAll} className="meta-toolbar-btn">Clear All</button>
+                <button onClick={() => setShowAddEmailModal(true)} className="meta-toolbar-btn">
+                  + Add Email
                 </button>
-                <button onClick={fetchUsers} disabled={isLoadingUsers} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                  <RefreshCw size={14} style={{ marginRight: '4px', animation: isLoadingUsers ? 'spin 1s linear infinite' : undefined }} /> Refresh
+                <button onClick={fetchUsers} disabled={isLoadingUsers} className="meta-toolbar-btn">
+                  <RefreshCw size={12} className={isLoadingUsers ? 'spin-icon' : undefined} /> Refresh
                 </button>
               </div>
               <div className="search-shell">
@@ -332,13 +383,13 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             </div>
 
             <div className="campaign-table-shell">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }} className="meta-table">
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr>
                     <th style={{ width: '40px', textAlign: 'center' }}></th>
-                    <th>User</th>
-                    <th>Status</th>
-                    <th>Plan</th>
+                    <th>USER</th>
+                    <th style={{ textAlign: 'center' }}>STATUS</th>
+                    <th style={{ textAlign: 'center' }}>PLAN</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,17 +405,17 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                           <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>{u.full_name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           {u.is_verified === false ? (
-                            <span className="badge-pill badge-error">Unverified</span>
+                            <span className="meta-pill meta-pending"><span className="dot"></span>Unverified</span>
                           ) : u.onboarding_completed ? (
-                            <span className="badge-pill badge-success">Onboarded</span>
+                            <span className="meta-pill meta-success"><span className="dot"></span>Onboarded</span>
                           ) : (
-                            <span className="badge-pill badge-warning">{getOnboardingLabel(u)}</span>
+                            <span className="meta-pill meta-warning"><span className="dot"></span>{getOnboardingLabel(u)}</span>
                           )}
                         </td>
-                        <td>
-                          <span className="badge-pill badge-neutral">{u.account_type || 'Free'}</span>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="meta-pill meta-neutral"><span className="dot"></span>{u.account_type || 'Free'}</span>
                         </td>
                       </tr>
                     ))
@@ -379,10 +430,10 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         {/* RIGHT COLUMN: Sticky Summary */}
         <div className="campaign-summary">
           
-          <div className="screen-panel campaign-launch-card">
-            <div className="campaign-panel-title compact">
-              <span>Launch setup</span>
-              <h3>Campaign Details</h3>
+          <div className="screen-panel campaign-launch-card" style={{ background: 'var(--surface)' }}>
+            <div className="campaign-panel-title compact" style={{ marginBottom: '16px' }}>
+              <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>LAUNCH SETUP</span>
+              <h3 style={{ fontSize: '1.2rem', letterSpacing: '-0.5px' }}>Campaign Details</h3>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -451,7 +502,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
       {/* SMTP Config Modal */}
       {showSettingsModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb, var(--ink) 40%, transparent)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: 'var(--shadow-dropdown)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>SMTP / Delivery Config</h3>
@@ -488,7 +539,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
       {/* Add Email Modal */}
       {showAddEmailModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb, var(--ink) 38%, transparent)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--neutral)' }}>Add Test Email</h3>

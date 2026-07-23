@@ -45,16 +45,23 @@ export const ProjectLogsViewer: React.FC = () => {
     return 'project-logs-status neutral';
   };
 
+  const getProjectLogo = (proj: string) => {
+    const lower = (proj || '').toLowerCase();
+    if (lower.includes('whatsapp')) return 'https://wb.getaipilot.in/logo.png';
+    if (lower.includes('social')) return 'https://social.getaipilot.in/logo.png';
+    return 'https://getaipilot.in/logo.png';
+  };
+
   return (
     <section className="project-logs-page fade-in">
-      <div className="project-logs-hero">
+      <div className="project-logs-hero" style={{ background: '#ffffff url(/bg2.jpg) no-repeat center center', backgroundSize: 'cover' }}>
         <div className="project-logs-hero-copy">
-          <span className="project-logs-kicker">
+          <span className="project-logs-kicker" style={{ color: '#60a5fa' }}>
             <Server size={14} />
             Multi-project mail stream
           </span>
-          <h2>Project Emails</h2>
-          <p>Track transactional and campaign mail by source project, recipient, provider, and delivery state.</p>
+          <h2 style={{ color: '#ffffff' }}>Project Emails</h2>
+          <p style={{ color: 'rgba(255,255,255,0.85)' }}>Track transactional and campaign mail by source project, recipient, provider, and delivery state.</p>
         </div>
         <button className="project-logs-refresh" onClick={fetchLogs} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'project-logs-refreshing' : ''} />
@@ -62,33 +69,49 @@ export const ProjectLogsViewer: React.FC = () => {
         </button>
       </div>
 
-      <div className="project-logs-stats" aria-label="Email log summary">
-        <div className="project-logs-stat">
-          <span className="project-logs-stat-icon dark"><Mail size={17} /></span>
-          <div>
-            <strong>{allLogs.length}</strong>
-            <span>Total emails</span>
+      <div className="project-logs-stats">
+        <div className="project-logs-stat" style={{ flexDirection: 'row', alignItems: 'center', padding: '12px 16px', minHeight: 'auto', gap: '16px' }}>
+          <div className="project-logs-stat-header" style={{ width: 'auto', justifyContent: 'flex-start', gap: '12px' }}>
+            <div className="project-logs-stat-icon dark" style={{ width: '36px', height: '36px' }}>
+              <Mail size={16} />
+            </div>
+            <span style={{ fontSize: '0.9rem' }}>Total emails</span>
+          </div>
+          <div className="project-logs-stat-value" style={{ marginLeft: 'auto' }}>
+            <strong style={{ fontSize: '1.5rem' }}>{allLogs.length}</strong>
           </div>
         </div>
-        <div className="project-logs-stat">
-          <span className="project-logs-stat-icon green"><CheckCircle2 size={17} /></span>
-          <div>
-            <strong>{deliveredCount}</strong>
-            <span>Sent or delivered</span>
+        <div className="project-logs-stat" style={{ flexDirection: 'row', alignItems: 'center', padding: '12px 16px', minHeight: 'auto', gap: '16px' }}>
+          <div className="project-logs-stat-header" style={{ width: 'auto', justifyContent: 'flex-start', gap: '12px' }}>
+            <div className="project-logs-stat-icon green" style={{ width: '36px', height: '36px' }}>
+              <CheckCircle2 size={16} />
+            </div>
+            <span style={{ fontSize: '0.9rem' }}>Sent or delivered</span>
+          </div>
+          <div className="project-logs-stat-value" style={{ marginLeft: 'auto' }}>
+            <strong style={{ fontSize: '1.5rem' }}>{deliveredCount}</strong>
           </div>
         </div>
-        <div className="project-logs-stat">
-          <span className="project-logs-stat-icon amber"><Clock3 size={17} /></span>
-          <div>
-            <strong>{queuedCount}</strong>
-            <span>Queued</span>
+        <div className="project-logs-stat" style={{ flexDirection: 'row', alignItems: 'center', padding: '12px 16px', minHeight: 'auto', gap: '16px' }}>
+          <div className="project-logs-stat-header" style={{ width: 'auto', justifyContent: 'flex-start', gap: '12px' }}>
+            <div className="project-logs-stat-icon amber" style={{ width: '36px', height: '36px' }}>
+              <Clock3 size={16} />
+            </div>
+            <span style={{ fontSize: '0.9rem' }}>Queued</span>
+          </div>
+          <div className="project-logs-stat-value" style={{ marginLeft: 'auto' }}>
+            <strong style={{ fontSize: '1.5rem' }}>{queuedCount}</strong>
           </div>
         </div>
-        <div className="project-logs-stat">
-          <span className="project-logs-stat-icon red"><AlertCircle size={17} /></span>
-          <div>
-            <strong>{failedCount}</strong>
-            <span>Failed or bounced</span>
+        <div className="project-logs-stat" style={{ flexDirection: 'row', alignItems: 'center', padding: '12px 16px', minHeight: 'auto', gap: '16px' }}>
+          <div className="project-logs-stat-header" style={{ width: 'auto', justifyContent: 'flex-start', gap: '12px' }}>
+            <div className="project-logs-stat-icon red" style={{ width: '36px', height: '36px' }}>
+              <AlertCircle size={16} />
+            </div>
+            <span style={{ fontSize: '0.9rem' }}>Failed or bounced</span>
+          </div>
+          <div className="project-logs-stat-value" style={{ marginLeft: 'auto' }}>
+            <strong style={{ fontSize: '1.5rem' }}>{failedCount}</strong>
           </div>
         </div>
       </div>
@@ -118,10 +141,13 @@ export const ProjectLogsViewer: React.FC = () => {
                   onClick={() => setSelectedProject(proj)}
                   className={`project-logs-project-button ${selectedProject === proj ? 'active' : ''}`}
                 >
-                  <span>
-                    <strong>{formatProjectName(proj)}</strong>
-                    <small>{proj}</small>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img src={getProjectLogo(proj)} alt={proj} style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'contain' }} />
+                    <span>
+                      <strong>{formatProjectName(proj)}</strong>
+                      <small>{proj}</small>
+                    </span>
+                  </div>
                   <b>{projectLogs[proj].length}</b>
                 </button>
               ))}
@@ -129,9 +155,12 @@ export const ProjectLogsViewer: React.FC = () => {
 
             <div className="project-logs-table-panel">
               <div className="project-logs-table-title">
-                <div>
-                  <span>Selected stream</span>
-                  <h3>{formatProjectName(selectedProject)}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src={getProjectLogo(selectedProject)} alt={selectedProject} style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'contain' }} />
+                  <div>
+                    <span>Selected stream</span>
+                    <h3>{formatProjectName(selectedProject)}</h3>
+                  </div>
                 </div>
                 <strong>{selectedLogs.length} emails</strong>
               </div>

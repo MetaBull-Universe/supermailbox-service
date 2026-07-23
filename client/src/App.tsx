@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { Sidebar, type TabType } from './components/Sidebar';
 import { DashboardQueueMonitor } from './pages/DashboardQueueMonitor';
 import { ProjectLogsViewer } from './pages/ProjectLogsViewer';
@@ -9,9 +12,19 @@ import { ApiService } from './services/api';
 import type { MetricCardData, QueueJob, ActivityLog, Template, Campaign, SuppressionItem, BounceReportItem } from './services/api';
 import './App.css';
 
+gsap.registerPlugin(useGSAP);
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.matchMedia('(max-width: 840px)').matches);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (activeTab === 'templates') {
+      setSidebarCollapsed(true);
+    }
+  }, [activeTab]);
 
   // App Data State
   const [metrics, setMetrics] = useState<MetricCardData[]>([]);
@@ -52,6 +65,51 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useGSAP(() => {
+    const root = mainRef.current;
+    if (!root || shouldReduceMotion) return;
+
+    const targets = root.querySelectorAll('.dashboard-command-hero, .screen-hero, .project-logs-hero, .dashboard-kpi-card');
+    if (targets.length === 0) return;
+
+    gsap.fromTo(
+      targets,
+      { autoAlpha: 0, y: 10 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.28,
+        ease: 'power3.out',
+        stagger: 0.035,
+        overwrite: true,
+      }
+    );
+
+    return () => gsap.killTweensOf(targets);
+  }, { scope: mainRef, dependencies: [activeTab, loading, shouldReduceMotion], revertOnUpdate: true });
+
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root || shouldReduceMotion) return;
+
+    const items = root.querySelectorAll<HTMLElement>(
+      '.dashboard-status-stack > div, .dashboard-health-list > div, .dashboard-job-row, tbody tr'
+    );
+    items.forEach((item) => item.classList.add('io-reveal'));
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [activeTab, loading, shouldReduceMotion]);
 
   const handlePromoteVersion = (templateKey: string, versionName: string) => {
     setTemplates((prev) =>
@@ -140,14 +198,22 @@ export const App: React.FC = () => {
       <div className="app-workspace">
 
         {/* Dynamic Screen Viewport */}
-        <main className="app-main">
+        <main className="app-main" ref={mainRef}>
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
-              <div className="spin-loader" style={{ width: '40px', height: '40px' }} />
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Synchronizing CPaaS data streams...</p>
+            <div className="app-loading">
+              <div className="spin-loader" />
+              <p>Synchronizing CPaaS data streams...</p>
             </div>
           ) : (
-            <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                className="app-page-motion"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+              >
               {activeTab === 'dashboard' && (
                 <DashboardQueueMonitor
                   metrics={metrics}
@@ -182,7 +248,8 @@ export const App: React.FC = () => {
                   onRemoveSuppression={handleRemoveSuppression}
                 />
               )}
-            </>
+              </motion.div>
+            </AnimatePresence>
           )}
         </main>
       </div>
