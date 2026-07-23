@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound } from 'lucide-react';
+import { Send, CheckCircle2, Search, CheckSquare, Square, Settings, ExternalLink, X, Activity, UsersRound, Plus, RefreshCw } from 'lucide-react';
 import { ApiService, type Campaign, type Template, type GetAIPilotUser } from '../services/api';
 
 interface SegmentBuilderProps {
@@ -9,6 +9,7 @@ interface SegmentBuilderProps {
 }
 
 type SegmentFilterMode = 'all' | 'pending_onboarding' | 'unverified' | 'completed_onboarding';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   templates,
@@ -20,7 +21,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
   // GetAIPilot users state
   const [getAIPilotUsers, setGetAIPilotUsers] = useState<GetAIPilotUser[]>([]);
-  const [, setIsLoadingUsers] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<SegmentFilterMode>('all');
   const [selectedEmails, setSelectedEmails] = useState<Record<string, boolean>>({});
@@ -30,6 +31,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [providerUsed, setProviderUsed] = useState<string | null>(null);
   const [, setJobStats] = useState<any | null>(null);
   const [customTestEmail, setCustomTestEmail] = useState('');
+  const [showAddEmailModal, setShowAddEmailModal] = useState(false);
 
   const handleAddCustomEmail = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +53,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
     ]);
     setSelectedEmails(prev => ({ ...prev, [cleanEmail]: true }));
     setCustomTestEmail('');
+    setShowAddEmailModal(false);
   };
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -59,12 +62,20 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [zeptoApiKey, setZeptoApiKey] = useState('');
+  const [fromEmail, setFromEmail] = useState('noreply@getaipilot.com');
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
 
   useEffect(() => {
     fetchUsers();
     fetchMailerConfig();
   }, []);
+
+  useEffect(() => {
+    if (templates.length === 0) return;
+    if (!templates.some((template) => template.key === selectedTemplate)) {
+      setSelectedTemplate(templates[0].key);
+    }
+  }, [templates, selectedTemplate]);
 
   const fetchMailerConfig = async () => {
     try {
@@ -75,6 +86,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         const data = await res.json();
         if (data?.config) {
           if (data.config.zeptoApiKey) setZeptoApiKey(data.config.zeptoApiKey);
+          if (data.config.fromEmail) setFromEmail(data.config.fromEmail);
           if (data.config.smtpHost) setSmtpHost(data.config.smtpHost);
           if (data.config.smtpPort) setSmtpPort(String(data.config.smtpPort));
           if (data.config.smtpUser) setSmtpUser(data.config.smtpUser);
@@ -111,6 +123,14 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
     return true;
   });
 
+  const getOnboardingLabel = (user: GetAIPilotUser) => {
+    if (user.onboarding_completed) return 'Onboarded';
+    if (user.tour_completed) return 'Tour done';
+    if (user.tour_step && user.tour_step > 0) return `Step ${user.tour_step}`;
+    if (user.tour_seen) return 'Tour started';
+    return 'Pending';
+  };
+
   const activeSelectedCount = Object.values(selectedEmails).filter(Boolean).length;
 
   const toggleSelectEmail = (email: string) => {
@@ -142,7 +162,12 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
 
     const recipients = getAIPilotUsers
       .filter(u => Boolean(selectedEmails[u.email]))
+      .filter(u => EMAIL_RE.test(u.email))
       .map(u => ({ email: u.email, full_name: u.full_name }));
+
+    if (recipients.length === 0) {
+      throw new Error('No valid email recipients selected.');
+    }
 
     try {
       const result = await ApiService.broadcastCampaign(
@@ -151,6 +176,10 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         recipients,
         scheduleDate || undefined
       );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Broadcast failed before queueing.');
+      }
 
       onLaunchCampaign && onLaunchCampaign(
         `${campaignName} (${activeSelectedCount} Users)`,
@@ -176,6 +205,8 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
       setSelectedEmails({});
     } catch (err) {
       console.error('Broadcast failed:', err);
+      setBroadcastSuccessMessage(`Broadcast failed: ${err instanceof Error ? err.message : 'Please check the server logs.'}`);
+      setProviderUsed(null);
     } finally {
       setIsBroadcasting(false);
     }
@@ -189,12 +220,13 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: zeptoApiKey ? 'zeptomail' : smtpUser && smtpPass ? 'smtp' : 'ethereal',
+          provider: zeptoApiKey || fromEmail ? 'zeptomail' : smtpUser && smtpPass ? 'smtp' : 'ethereal',
           smtpHost,
           smtpPort: parseInt(smtpPort || '587'),
           smtpUser,
           smtpPass,
-          zeptoApiKey
+          ...(zeptoApiKey ? { zeptoApiKey } : {}),
+          fromEmail
         })
       });
       setSettingsSavedMessage(true);
@@ -232,9 +264,11 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
             <CheckCircle2 size={24} color="var(--primary)" />
             <div>
               <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-main)' }}>{broadcastSuccessMessage}</div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Provider: <strong>{providerUsed}</strong>
-              </div>
+              {providerUsed && (
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Provider: <strong>{providerUsed}</strong>
+                </div>
+              )}
             </div>
           </div>
           {previewUrl && (
@@ -251,7 +285,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         {/* LEFT COLUMN: Configuration */}
         <div className="campaign-left">
           
-          <div className="screen-panel campaign-panel">
+          <div className="screen-panel campaign-audience-panel">
             <div className="campaign-panel-title">
               <span>Segment controls</span>
               <h3>Target Audience</h3>
@@ -279,6 +313,12 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={selectVisible} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Select Visible</button>
                 <button onClick={deselectAll} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>Clear All</button>
+                <button onClick={() => setShowAddEmailModal(true)} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+                  <Plus size={14} style={{ marginRight: '4px' }} /> Add Email
+                </button>
+                <button onClick={fetchUsers} disabled={isLoadingUsers} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+                  <RefreshCw size={14} style={{ marginRight: '4px', animation: isLoadingUsers ? 'spin 1s linear infinite' : undefined }} /> Refresh
+                </button>
               </div>
               <div className="search-shell">
                 <Search size={14} color="var(--text-muted)" />
@@ -291,7 +331,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
               </div>
             </div>
 
-            <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', maxHeight: '320px', overflowY: 'auto' }}>
+            <div className="campaign-table-shell">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr>
@@ -320,7 +360,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                           ) : u.onboarding_completed ? (
                             <span className="badge-pill badge-success">Onboarded</span>
                           ) : (
-                            <span className="badge-pill badge-warning">Pending</span>
+                            <span className="badge-pill badge-warning">{getOnboardingLabel(u)}</span>
                           )}
                         </td>
                         <td>
@@ -332,18 +372,6 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                 </tbody>
               </table>
             </div>
-
-            <form onSubmit={handleAddCustomEmail} style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
-              <input
-                type="email"
-                placeholder="Add custom test email..."
-                value={customTestEmail}
-                onChange={(e) => setCustomTestEmail(e.target.value)}
-                className="ui-input"
-                style={{ flex: 1 }}
-              />
-              <button type="submit" className="btn-secondary">Add & Select</button>
-            </form>
           </div>
           
         </div>
@@ -351,7 +379,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
         {/* RIGHT COLUMN: Sticky Summary */}
         <div className="campaign-summary">
           
-          <div className="screen-panel" style={{ padding: '24px' }}>
+          <div className="screen-panel campaign-launch-card">
             <div className="campaign-panel-title compact">
               <span>Launch setup</span>
               <h3>Campaign Details</h3>
@@ -379,7 +407,7 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                   style={{ width: '100%', cursor: 'pointer' }}
                 >
                   {templates.map(t => (
-                    <option key={t.key} value={t.key}>{t.name} ({t.key})</option>
+                    <option key={t.key} value={t.key}>{t.name} - {t.category} ({t.key})</option>
                   ))}
                 </select>
               </div>
@@ -435,6 +463,11 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>ZeptoMail API Key</label>
                 <input type="password" value={zeptoApiKey} onChange={(e) => setZeptoApiKey(e.target.value)} className="ui-input" style={{ width: '100%' }} />
               </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Verified Sender Email</label>
+                <input type="email" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} placeholder="noreply@your-verified-domain.com" className="ui-input" style={{ width: '100%' }} />
+              </div>
               
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '12px' }}>Fallback Custom SMTP</span>
@@ -452,6 +485,36 @@ export const SegmentBuilder: React.FC<SegmentBuilderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Add Email Modal */}
+      {showAddEmailModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--neutral)' }}>Add Test Email</h3>
+              <button onClick={() => setShowAddEmailModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+            </div>
+            
+            <form onSubmit={handleAddCustomEmail} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>EMAIL ADDRESS</label>
+                <input
+                  type="email"
+                  placeholder="e.g. hello@example.com"
+                  value={customTestEmail}
+                  onChange={(e) => setCustomTestEmail(e.target.value)}
+                  className="ui-input"
+                  style={{ width: '100%' }}
+                  autoFocus
+                />
+              </div>
+              <button type="submit" className="btn-primary" style={{ marginTop: '8px' }}>Add & Select</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default SegmentBuilder;

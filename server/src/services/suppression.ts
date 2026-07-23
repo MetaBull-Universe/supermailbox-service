@@ -40,15 +40,61 @@ export async function addSuppression(
   email: string,
   reason: 'bounce' | 'complaint' | 'manual' | 'unsubscribe',
   productId?: string
-): Promise<void> {
+): Promise<any | null> {
   const normalizedEmail = email.toLowerCase().trim();
   try {
-    await supabase.from('suppression_list').upsert({
-      email: normalizedEmail,
-      product_id: productId || null,
-      reason
-    }, { onConflict: 'email,product_id' });
+    const existingQuery = supabase
+      .from('suppression_list')
+      .select('id, email, reason, created_at')
+      .eq('email', normalizedEmail);
+
+    const { data: existingRows, error: existingError } = productId
+      ? await existingQuery.eq('product_id', productId)
+      : await existingQuery.is('product_id', null);
+
+    if (existingError) throw existingError;
+
+    if (existingRows?.[0]?.id) {
+      const { data, error } = await supabase
+        .from('suppression_list')
+        .update({ reason })
+        .eq('id', existingRows[0].id)
+        .select('id, email, reason, created_at')
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from('suppression_list')
+      .insert({
+        email: normalizedEmail,
+        product_id: productId || null,
+        reason
+      })
+      .select('id, email, reason, created_at')
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (err: any) {
     console.error('[Suppression Service] Failed to insert suppression entry:', err.message);
+    return null;
+  }
+}
+
+export async function removeSuppression(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('suppression_list')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (err: any) {
+    console.error('[Suppression Service] Failed to delete suppression entry:', err.message);
+    return false;
   }
 }

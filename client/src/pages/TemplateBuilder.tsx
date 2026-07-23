@@ -19,6 +19,52 @@ interface SimpleEmailContent {
   footerText: string;
 }
 
+const RESPONSIVE_EMAIL_STYLE_ID = 'supermailbox-responsive-email-fixes';
+
+const addResponsiveEmailFixes = (html: string) => {
+  if (!html || html.includes(`id="${RESPONSIVE_EMAIL_STYLE_ID}"`)) return html;
+
+  const style = `<style id="${RESPONSIVE_EMAIL_STYLE_ID}">
+@media only screen and (max-width: 480px) {
+  body { margin: 0 !important; padding: 0 !important; }
+  div[style*="max-width:600px"],
+  div[style*="max-width: 600px"],
+  table[style*="max-width:600px"],
+  table[style*="max-width: 600px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  div[style*="display:flex"],
+  div[style*="display: flex"] {
+    display: block !important;
+  }
+  div[style*="flex:0 0 180px"],
+  div[style*="flex: 0 0 180px"],
+  div[style*="width:180px"],
+  div[style*="width: 180px"] {
+    width: 150px !important;
+    max-width: 72% !important;
+    margin: 0 auto 18px auto !important;
+  }
+  a[style*="linear-gradient"],
+  a[style*="background: linear-gradient"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 260px !important;
+    margin: 0 auto !important;
+    padding: 14px 16px !important;
+    text-align: center !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    box-sizing: border-box !important;
+  }
+  h1, h2, h3, p { text-align: left !important; }
+}
+</style>`;
+
+  return html.includes('</head>') ? html.replace('</head>', `${style}</head>`) : `${style}${html}`;
+};
+
 export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
   templates,
   onSaveDraft,
@@ -127,16 +173,20 @@ ${footerHtml}
     otp_code: '849-201',
     amount: '₹2,499',
     invoice_id: 'INV-2026-9814',
-    wallet_balance: '₹14,500'
+    wallet_balance: '₹14,500',
+    ConfirmationURL: 'https://mail.getaipilot.in/verify?preview=true',
+    confirmation_url: 'https://mail.getaipilot.in/verify?preview=true',
+    confirmationUrl: 'https://mail.getaipilot.in/verify?preview=true',
+    verify_url: 'https://mail.getaipilot.in/verify?preview=true'
   };
 
-  const getActiveHtml = () => (customHtml !== null ? customHtml : generateCompiledHtml());
+  const getActiveHtml = () => addResponsiveEmailFixes(customHtml !== null ? customHtml : generateCompiledHtml());
 
   const getRenderedPreview = () => {
     let previewHtml = getActiveHtml();
     if (!showSampleData) return previewHtml;
     Object.entries(sampleData).forEach(([key, val]) => {
-      previewHtml = previewHtml.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), val);
+      previewHtml = previewHtml.replace(new RegExp(`\\{\\{\\s*\\.?\\s*${key}\\s*\\}\\}`, 'g'), val);
     });
     return previewHtml;
   };
@@ -400,13 +450,13 @@ ${footerHtml}
         
         {/* The Device/Browser Frame */}
         <div className="template-device-frame" style={{
-          width: previewMode === 'desktop' ? '680px' : '375px',
+          width: previewMode === 'desktop' ? '680px' : '340px',
           borderRadius: previewMode === 'desktop' ? '12px' : '36px',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
-          flexShrink: 0,
-          minHeight: previewMode === 'mobile' ? '800px' : 'auto'
+          flex: 1,
+          minHeight: 0
         }}>
           {/* Faux Header (Browser or Mobile Notch) */}
           {previewMode === 'desktop' ? (
@@ -425,8 +475,8 @@ ${footerHtml}
           )}
 
           {/* Rendered Output */}
-          <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '20px', background: '#ffffff' }}>
-             <div dangerouslySetInnerHTML={{ __html: getRenderedPreview() }} />
+          <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '10px', background: '#ffffff', overflowY: 'auto' }}>
+             <div className={previewMode === 'mobile' ? 'email-mobile-preview' : undefined} dangerouslySetInnerHTML={{ __html: getRenderedPreview() }} />
           </div>
         </div>
 

@@ -1,5 +1,4 @@
 // API Service connecting to Real Fastify Backend
-import { SYNCED_228_USERS } from './getaipilotUsersData';
 
 export interface MetricCardData {
   title: string;
@@ -62,9 +61,25 @@ export interface Campaign {
 export interface SuppressionItem {
   id: string;
   email: string;
-  reason: 'bounce' | 'complaint' | 'unsubscribe' | 'manual';
+  reason: 'bounce' | 'complaint' | 'unsubscribe' | 'manual' | string;
   dateAdded: string;
   linkedIdentities?: string[];
+  type?: string;
+  associatedAgent?: string;
+  category?: string;
+  description?: string;
+}
+
+export interface BounceReportItem {
+  id: string;
+  email: string;
+  bounceType: 'hard' | 'soft';
+  category: string;
+  reason: string;
+  subject: string;
+  source: string;
+  processedAt: string;
+  displayTime: string;
 }
 
 export interface GetAIPilotUser {
@@ -76,11 +91,16 @@ export interface GetAIPilotUser {
   created_at: string;
   status: string;
   onboarding_completed?: boolean;
+  onboarding_status?: string;
+  tour_seen?: boolean;
+  tour_completed?: boolean;
+  tour_step?: number;
   is_verified?: boolean;
 }
 
 export interface BroadcastResult {
   success?: boolean;
+  error?: string;
   campaignId?: string;
   queued?: number;
   campaign?: Campaign;
@@ -247,11 +267,13 @@ export class ApiService {
       } else {
         const errText = await res.text();
         console.error('Backend broadcast non-OK response:', res.status, errText);
+        return { success: false, queued: 0, error: errText };
       }
     } catch (err) {
       console.error('Broadcast fetch error:', err);
+      return { success: false, queued: 0, error: err instanceof Error ? err.message : 'Broadcast request failed' };
     }
-    return { success: false, queued: 0 };
+    return { success: false, queued: 0, error: 'Broadcast failed' };
   }
 
   static async getSuppressions(): Promise<SuppressionItem[]> {
@@ -267,39 +289,65 @@ export class ApiService {
     return [];
   }
 
-  static async getGetAIPilotUsers(): Promise<GetAIPilotUser[]> {
+  static async addSuppression(email: string, reason: SuppressionItem['reason']): Promise<SuppressionItem | null> {
     try {
-      const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrbHhsYXBwamN1dmRxanZlY2ZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODE0NzA4MywiZXhwIjoyMDgzNzIzMDgzfQ.8raDYx4BqeVELD691E720qBORhWEI4L68c_ED2JIt5w';
-      const response = await fetch(
-        'https://uklxlappjcuvdqjvecfh.supabase.co/rest/v1/profiles?select=*&limit=1000',
-        {
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`
-          }
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data.map((p: any, idx: number) => ({
-            id: p.id || String(idx),
-            email: p.email || p.phone || (`user_${idx}@getaipilot.in`),
-            full_name: p.full_name || p.username || (p.email ? p.email.split('@')[0] : `User ${idx}`),
-            account_type: p.account_type || p.plan || 'Free Tier',
-            country: p.country || 'India',
-            created_at: (p.created_at || '2026-07-01').split('T')[0],
-            status: 'active',
-            onboarding_completed: p.onboarding_completed === true,
-            is_verified: Boolean(p.email_confirmed_at || (p.raw_user_meta_data && p.raw_user_meta_data.email_verified))
-          }));
-        }
+      const res = await fetch(`${API_BASE}/suppressions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, reason })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.suppression) return data.suppression;
+      }
+
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `Suppression add failed with ${res.status}`);
+    } catch (err) {
+      console.warn('API addSuppression failed:', err);
+      throw err;
+    }
+  }
+
+  static async removeSuppression(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/suppressions/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) return true;
+
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `Suppression remove failed with ${res.status}`);
+    } catch (err) {
+      console.warn('API removeSuppression failed:', err);
+      throw err;
+    }
+  }
+
+  static async getBounceReports(): Promise<BounceReportItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/bounce-reports`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.bounces)) return data.bounces;
       }
     } catch (err) {
-      // Fallback
+      console.warn('API getBounceReports failed:', err);
     }
-    // We are keeping the SYNCED_228_USERS snapshot for this specific external service (Supabase Profiles) 
-    // as it is unrelated to our postgres backend tables for now.
-    return SYNCED_228_USERS;
+    return [];
+  }
+
+  static async getGetAIPilotUsers(): Promise<GetAIPilotUser[]> {
+    try {
+      const response = await fetch(`${API_BASE}/getaipilot/users`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data?.users) && data.users.length > 0) return data.users;
+      }
+    } catch (err) {
+      console.warn('API getGetAIPilotUsers failed:', err);
+    }
+    return [];
   }
 }

@@ -6,7 +6,7 @@ import { TemplateBuilder } from './pages/TemplateBuilder';
 import { SegmentBuilder } from './pages/SegmentBuilder';
 import { SuppressionManager } from './pages/SuppressionManager';
 import { ApiService } from './services/api';
-import type { MetricCardData, QueueJob, ActivityLog, Template, Campaign, SuppressionItem } from './services/api';
+import type { MetricCardData, QueueJob, ActivityLog, Template, Campaign, SuppressionItem, BounceReportItem } from './services/api';
 import './App.css';
 
 export const App: React.FC = () => {
@@ -20,18 +20,20 @@ export const App: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [suppressions, setSuppressions] = useState<SuppressionItem[]>([]);
+  const [bounceReports, setBounceReports] = useState<BounceReportItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [m, j, l, t, c, s] = await Promise.all([
+      const [m, j, l, t, c, s, b] = await Promise.all([
         ApiService.getMetrics(),
         ApiService.getQueueJobs(),
         ApiService.getActivityLogs(),
         ApiService.getTemplates(),
         ApiService.getCampaigns(),
         ApiService.getSuppressions(),
+        ApiService.getBounceReports(),
       ]);
       setMetrics(m);
       setJobs(j);
@@ -39,6 +41,7 @@ export const App: React.FC = () => {
       setTemplates(t);
       setCampaigns(c);
       setSuppressions(s);
+      setBounceReports(b);
     } catch (err) {
       console.error('Telemetry fetch error:', err);
     } finally {
@@ -101,33 +104,25 @@ export const App: React.FC = () => {
     setCampaigns([newCamp, ...campaigns]);
   };
 
-  const handleAddSuppression = (email: string, reason: SuppressionItem['reason']) => {
-    const newItem: SuppressionItem = {
-      id: `sup_${Math.random().toString(36).substring(7)}`,
-      email,
-      reason,
-      dateAdded: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      linkedIdentities: ['Manual Admin Addition']
-    };
-    setSuppressions([newItem, ...suppressions]);
+  const handleAddSuppression = async (email: string, reason: SuppressionItem['reason']) => {
+    try {
+      const savedItem = await ApiService.addSuppression(email, reason);
+      if (savedItem) {
+        setSuppressions((prev) => [savedItem, ...prev.filter((item) => item.id !== savedItem.id)]);
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Unable to add suppression');
+    }
   };
 
-  const handleRemoveSuppression = (id: string) => {
-    setSuppressions((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  const getTabTitle = (tab: TabType) => {
-    switch (tab) {
-      case 'dashboard':
-        return 'Queue Monitor & Dashboard';
-      case 'project_logs':
-        return 'Project-wise Email Logs';
-      case 'templates':
-        return 'Template Builder & MJML Inspector';
-      case 'campaigns':
-        return 'Audience Segments & Campaigns';
-      case 'contacts':
-        return 'Contacts & Global Suppression Manager';
+  const handleRemoveSuppression = async (id: string) => {
+    try {
+      const removed = await ApiService.removeSuppression(id);
+      if (removed) {
+        setSuppressions((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Unable to remove suppression');
     }
   };
 
@@ -143,21 +138,6 @@ export const App: React.FC = () => {
 
       {/* Main Workspace Content */}
       <div className="app-workspace">
-        {/* Sleek Light Header */}
-        <header className="app-topbar">
-          <div className="app-title-block">
-            <span>SupermailBox console</span>
-            <h1>
-              {getTabTitle(activeTab)}
-            </h1>
-          </div>
-          <div className="app-topbar-actions">
-            <span className="app-live-badge">
-              <b />
-              Telemetry Online
-            </span>
-          </div>
-        </header>
 
         {/* Dynamic Screen Viewport */}
         <main className="app-main">
@@ -197,6 +177,7 @@ export const App: React.FC = () => {
               {activeTab === 'contacts' && (
                 <SuppressionManager
                   suppressions={suppressions}
+                  bounceReports={bounceReports}
                   onAddSuppression={handleAddSuppression}
                   onRemoveSuppression={handleRemoveSuppression}
                 />

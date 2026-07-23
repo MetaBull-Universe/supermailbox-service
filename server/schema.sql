@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+);   
 
 -- 2. Unified Contacts Model
 CREATE TABLE IF NOT EXISTS public.contacts (
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   action TEXT NOT NULL,
   resource_type TEXT NOT NULL,
   resource_id TEXT,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}',`
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

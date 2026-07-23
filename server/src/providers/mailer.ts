@@ -17,14 +17,14 @@ export interface MailerConfig {
 
 // Runtime dynamic config prioritized for ZeptoMail as per user's credentials
 let currentConfig: MailerConfig = {
-  provider: (process.env.ZEPTOMAIL_API_KEY && !process.env.ZEPTOMAIL_API_KEY.includes('placeholder')) ? 'zeptomail' : 'ethereal',
+  provider: ((process.env.ZEPTOMAIL_API_KEY || process.env.ZEPT_API_KEY) && !(process.env.ZEPTOMAIL_API_KEY || process.env.ZEPT_API_KEY || '').includes('placeholder')) ? 'zeptomail' : 'ethereal',
   zeptoUrl: process.env.ZEPTOMAIL_URL || 'https://api.zeptomail.in/v1.1/email',
-  zeptoApiKey: process.env.ZEPTOMAIL_API_KEY || '',
+  zeptoApiKey: process.env.ZEPTOMAIL_API_KEY || process.env.ZEPT_API_KEY || '',
   smtpHost: process.env.SMTP_HOST || '',
   smtpPort: parseInt(process.env.SMTP_PORT || '587'),
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
-  fromEmail: process.env.ZEPTOMAIL_FROM_EMAIL || 'noreply@getaipilot.com'
+  fromEmail: process.env.ZEPTOMAIL_FROM_EMAIL || process.env.ZEPTO_FROM_EMAIL || 'noreply@getaipilot.com'
 };
 
 export function getMailerConfig(): MailerConfig {
