@@ -57,17 +57,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className={`sidebar-shell ${collapsed ? 'collapsed' : ''}`}>
       <div>
-        <div className="sidebar-brand">
-          <div className="sidebar-logo" aria-hidden="true">
-            <MailCheck size={18} strokeWidth={2.4} />
-          </div>
+        <div className="sidebar-brand" style={{ justifyContent: collapsed ? 'center' : 'space-between', padding: collapsed ? '10px 0 14px 0' : '10px 16px 14px' }}>
           {!collapsed && (
-            <div className="sidebar-brand-copy">
-              <span>SupermailBox</span>
-              <small>Delivery control</small>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="sidebar-logo" aria-hidden="true" style={{ background: 'transparent', padding: 0, width: '28px', height: '28px' }}>
+                <img src="/logo.jpg" alt="GetAiPilot Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+              </div>
+              <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)' }}>SuperMail</span>
             </div>
           )}
+          <button
+            onClick={onToggleCollapse}
+            className="sidebar-collapse-icon"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px', color: 'var(--ink)' }}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
         </div>
+
+
 
         <div className="sidebar-nav-shell">
           <nav className="sidebar-nav" aria-label="Primary navigation">
@@ -104,14 +112,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="sidebar-status-dot" aria-label="Online" />
           </div>
         )}
-
-        <button
-          onClick={onToggleCollapse}
-          className="sidebar-collapse"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
       </div>
     </aside>
   );

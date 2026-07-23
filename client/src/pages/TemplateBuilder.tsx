@@ -90,8 +90,8 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
     footerText: '© 2026 GetAIPilot Core Platform. All rights reserved. You received this email because you registered on GetAIPilot.'
   });
 
-  const [mode, setMode] = useState<'simple' | 'ai' | 'code'>(liveVersion?.html ? 'code' : 'simple');
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [mode, setMode] = useState<'simple' | 'ai'>('simple');
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | 'code'>(liveVersion?.html ? 'code' : 'desktop');
   const [showSampleData, setShowSampleData] = useState<boolean>(true);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -227,10 +227,11 @@ ${footerHtml}
       
       if (ver?.html) {
         setCustomHtml(ver.html);
-        setMode('code');
+        setPreviewMode('code');
       } else {
         setCustomHtml(null);
         setMode('simple');
+        setPreviewMode('desktop');
       }
 
       // Keep updating the form fallbacks just in case user switches to simple mode
@@ -364,6 +365,7 @@ ${footerHtml}
       <header className="template-studio-command">
         <div className="template-toolbar-title">
           <span>Templates</span>
+          <span style={{ color: 'var(--border-strong)', fontSize: '1rem', fontWeight: 300 }}>/</span>
           <strong>{activeTemplate?.name || 'Email builder'}</strong>
         </div>
         <div className="template-toolbar-actions">
@@ -384,16 +386,15 @@ ${footerHtml}
       <div className="template-tools-panel" style={{
         position: 'relative',
         zIndex: 10,
-        width: '380px',
         display: 'flex',
         flexDirection: 'column',
       }}>
         
         {/* Template Selector Header */}
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Template</span>
-            <button onClick={() => setShowCreateModal(true)} style={{ background: 'transparent', border: 'none', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Template</span>
+            <button onClick={() => setShowCreateModal(true)} style={{ background: 'transparent', border: 'none', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 500, cursor: 'pointer' }}>
               <Plus size={14} /> New
             </button>
           </div>
@@ -443,22 +444,19 @@ ${footerHtml}
         </div>
 
         {/* Tabbed Editor Modes */}
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)' }}>
           <div className="template-mode-tabs">
-            <button className={`template-mode-tab ${mode === 'simple' ? 'active' : ''}`} onClick={() => { setMode('simple'); setCustomHtml(null); }}>
+            <button className={`template-mode-tab ${mode === 'simple' ? 'active' : ''}`} onClick={() => { setMode('simple'); setCustomHtml(null); setPreviewMode('desktop'); }}>
               <Layout size={14} /> Form
             </button>
             <button className={`template-mode-tab ${mode === 'ai' ? 'active' : ''}`} onClick={() => setMode('ai')}>
               <Sparkles size={14} /> AI
             </button>
-            <button className={`template-mode-tab ${mode === 'code' ? 'active' : ''}`} onClick={() => { if (customHtml === null) setCustomHtml(generateCompiledHtml()); setMode('code'); }}>
-              <Code size={14} /> Code
-            </button>
           </div>
         </div>
 
         {/* Editor Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           <div>
             <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Email Subject Line</label>
@@ -513,7 +511,7 @@ ${footerHtml}
 
           {mode === 'ai' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: 'var(--primary-light)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ background: 'linear-gradient(to right, rgba(1, 11, 201, 0.08), rgba(1, 11, 201, 0.02))', border: '1px solid rgba(1, 11, 201, 0.15)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--primary)', display: 'block', marginBottom: '4px' }}>AI Email Architect</span>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-body)', margin: 0 }}>Describe the email purpose and the AI will construct the ideal layout and copy.</p>
               </div>
@@ -524,19 +522,7 @@ ${footerHtml}
             </div>
           )}
 
-          {mode === 'code' && (
-            <div className="template-code-editor" aria-label="HTML code editor">
-              <div className="template-code-lines" aria-hidden="true">
-                {editorLineNumbers.map((line) => <span key={line}>{line}</span>)}
-              </div>
-              <textarea
-                value={editorHtml}
-                onChange={(e) => setCustomHtml(e.target.value)}
-                spellCheck={false}
-                style={{ height: `${Math.max(520, editorLineNumbers.length * 21)}px` }}
-              />
-            </div>
-          )}
+
 
         </div>
       </div>
@@ -555,23 +541,42 @@ ${footerHtml}
             <button type="button" onClick={() => setPreviewMode('mobile')} className={previewMode === 'mobile' ? 'active' : ''}>
               <Smartphone size={14} /> Mobile
             </button>
+            <button type="button" onClick={() => { if (customHtml === null) setCustomHtml(generateCompiledHtml()); setPreviewMode('code'); }} className={previewMode === 'code' ? 'active' : ''}>
+              <Code size={14} /> Code
+            </button>
           </div>
         </div>
         
-        {/* Rendered email frame */}
-        <div className={`template-device-frame ${previewMode === 'mobile' ? 'mobile-preview-frame' : 'desktop-preview-frame'}`} style={{
-          width: previewMode === 'desktop' ? '680px' : '340px',
-          borderRadius: previewMode === 'desktop' ? '12px' : '36px',
-          transition: 'border-radius 0.3s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0
-        }}>
-          <div style={{ flex: 1, padding: previewMode === 'desktop' ? '40px' : '10px', background: '#ffffff', overflowY: 'auto' }}>
-             <div className={previewMode === 'mobile' ? 'email-mobile-preview' : undefined} dangerouslySetInnerHTML={{ __html: getRenderedPreview() }} />
+        {/* Rendered email frame or Code editor */}
+        {previewMode === 'code' ? (
+          <div className="template-code-editor" aria-label="HTML code editor" style={{ flex: 1, minHeight: 0, height: '100%' }}>
+            <div className="template-code-lines" aria-hidden="true">
+              {editorLineNumbers.map((line) => <span key={line}>{line}</span>)}
+            </div>
+            <textarea
+              value={editorHtml}
+              onChange={(e) => setCustomHtml(e.target.value)}
+              spellCheck={false}
+              style={{ height: `${Math.max(100, editorLineNumbers.length * 21)}px` }}
+            />
           </div>
-        </div>
+        ) : (
+          <div className={`template-device-frame ${previewMode === 'mobile' ? 'mobile-preview-frame' : 'desktop-preview-frame'}`} style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0
+          }}>
+            <div style={{ flex: 1, padding: previewMode === 'mobile' ? '24px 0 0 0' : '0', background: '#ffffff', overflow: 'hidden', display: 'flex' }}>
+               <iframe
+                 title="Email Preview"
+                 srcDoc={getRenderedPreview()}
+                 style={{ width: '100%', height: '100%', border: 'none' }}
+                 sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+               />
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -583,7 +588,7 @@ ${footerHtml}
           </div>
           <div className="template-inspector-row">
             <span>Mode</span>
-            <strong>{mode === 'simple' ? 'Form' : mode === 'ai' ? 'AI draft' : 'Code'}</strong>
+            <strong>{mode === 'simple' ? 'Form' : 'AI draft'}</strong>
           </div>
           <div className="template-inspector-row">
             <span><Braces size={14} /> Variables</span>

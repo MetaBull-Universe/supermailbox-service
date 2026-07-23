@@ -20,6 +20,12 @@ export const App: React.FC = () => {
   const mainRef = useRef<HTMLElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
+  useEffect(() => {
+    if (activeTab === 'templates') {
+      setSidebarCollapsed(true);
+    }
+  }, [activeTab]);
+
   // App Data State
   const [metrics, setMetrics] = useState<MetricCardData[]>([]);
   const [jobs, setJobs] = useState<QueueJob[]>([]);
@@ -65,6 +71,7 @@ export const App: React.FC = () => {
     if (!root || shouldReduceMotion) return;
 
     const targets = root.querySelectorAll('.dashboard-command-hero, .screen-hero, .project-logs-hero, .dashboard-kpi-card');
+    if (targets.length === 0) return;
 
     gsap.fromTo(
       targets,

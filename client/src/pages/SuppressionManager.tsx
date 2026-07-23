@@ -94,8 +94,8 @@ const getCategoryDescription = (category?: string) => {
 const getCategoryColor = (index: number) => ['#6F5570', '#1F6F5B', '#D96767', '#D99745', '#769181'][index % 5];
 
 export const SuppressionManager: React.FC<SuppressionProps> = ({
-  suppressions,
-  bounceReports,
+  suppressions = [],
+  bounceReports = [],
   onAddSuppression,
   onRemoveSuppression,
 }) => {
@@ -499,7 +499,7 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="ui-input"
                 />
-              </label>
+              </div>
 
               <label>
                 Reason
