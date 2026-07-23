@@ -25,7 +25,7 @@ export interface ActivityLog {
   timestamp: string;
   recipient: string;
   type: 'Transactional' | 'Campaign';
-  provider: 'ZeptoMail' | 'SES' | 'Resend';
+  provider: string;
   status: 'Delivered' | 'Bounced' | 'Sent' | 'Queued' | 'Failed';
 }
 
