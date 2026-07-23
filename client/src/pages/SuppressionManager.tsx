@@ -93,6 +93,26 @@ const getCategoryDescription = (category?: string) => {
 
 const getCategoryColor = (index: number) => ['#6F5570', '#1F6F5B', '#D96767', '#D99745', '#769181'][index % 5];
 
+const formatSuppressionDate = (dateStr?: string) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const formattedHours = String(hours).padStart(2, '0');
+
+  return `${day} ${month} ${year} ${formattedHours}:${minutes} ${ampm}`;
+};
+
 export const SuppressionManager: React.FC<SuppressionProps> = ({
   suppressions = [],
   bounceReports = [],
@@ -104,6 +124,7 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSuppression, setSelectedSuppression] = useState<SuppressionItem | null>(null);
   const [emailDialogCategory, setEmailDialogCategory] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [newReason, setNewReason] = useState<SuppressionItem['reason']>('manual');
@@ -242,7 +263,7 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
         <div className="suppression-insight-card warning">
           <span><MailX size={16} /> Hard bounces</span>
           <strong>{hardBounces.length}</strong>
-          <small>Permanent failures added to suppression</small>
+          <small>Permanent failures from bounce reports</small>
         </div>
         <div className="suppression-insight-card">
           <span><TrendingDown size={16} /> Soft bounces</span>
@@ -313,7 +334,7 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
         <div className="screen-panel bounce-explainer">
           <HardDriveDownload size={18} />
           <div>
-            <h3>Hard bounces become suppressions. Soft bounces stay visible here.</h3>
+            <h3>Hard and soft bounces stay separate from suppressions.</h3>
             <p>Use this report to spot temporary mailbox issues without blocking valid contacts too early.</p>
           </div>
         </div>
@@ -434,17 +455,25 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
                 filteredSuppressions.map((item) => {
                   const reasonColor = getReasonColor(item.reason);
                   return (
-                    <tr key={item.id}>
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedSuppression(item)}
+                      style={{ cursor: 'pointer' }}
+                      className="suppression-table-row"
+                    >
                       <td><strong>{item.email}</strong></td>
                       <td>
                         <span className="badge-pill" style={{ background: item.reason === 'bounce' ? 'var(--error-light)' : item.reason === 'complaint' ? 'var(--warning-light)' : 'var(--secondary-light)', color: reasonColor, border: `1px solid ${reasonColor}33` }}>
                           <AlertCircle size={12} /> {item.reason.charAt(0).toUpperCase() + item.reason.slice(1)}
                         </span>
                       </td>
-                      <td className="mono-cell">{item.dateAdded}</td>
+                      <td className="mono-cell">{formatSuppressionDate(item.dateAdded)}</td>
                       <td style={{ textAlign: 'right' }}>
                         <button
-                          onClick={() => onRemoveSuppression?.(item.id, item.email)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveSuppression?.(item.id, item.email);
+                          }}
                           className="btn-secondary"
                           style={{ padding: '6px 12px', fontSize: '0.75rem', color: 'var(--error)', borderColor: 'var(--border-color)' }}
                         >
@@ -516,6 +545,60 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedSuppression && (
+        <div className="modal-backdrop" onClick={() => setSelectedSuppression(null)}>
+          <div className="suppression-details-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="suppression-details-close"
+              onClick={() => setSelectedSuppression(null)}
+              aria-label="Close details"
+            >
+              <X size={16} />
+            </button>
+
+            <h3 className="suppression-details-title">Suppression details</h3>
+
+            <div className="suppression-details-body">
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Email Address</span>
+                <span className="suppression-details-value">{selectedSuppression.email}</span>
+              </div>
+
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Type</span>
+                <span className="suppression-details-value">{selectedSuppression.type || 'Sending'}</span>
+              </div>
+
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Date Added</span>
+                <span className="suppression-details-value">{formatSuppressionDate(selectedSuppression.dateAdded)}</span>
+              </div>
+
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Associated Agent</span>
+                <span className="suppression-details-value">{selectedSuppression.associatedAgent || 'Metabull'}</span>
+              </div>
+
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Category</span>
+                <span className="suppression-details-value">
+                  <span className="suppression-category-badge">
+                    {selectedSuppression.category || (selectedSuppression.reason === 'manual' ? 'Manual' : selectedSuppression.reason === 'bounce' ? 'Bounce' : selectedSuppression.reason === 'complaint' ? 'Spam' : 'Opt-out')}
+                  </span>
+                </span>
+              </div>
+
+              <div className="suppression-details-row">
+                <span className="suppression-details-label">Reason</span>
+                <span className="suppression-details-value">
+                  {selectedSuppression.description || `Added from SuperMailBox: ${selectedSuppression.reason}`}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       )}
