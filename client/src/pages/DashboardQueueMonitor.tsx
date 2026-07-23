@@ -53,6 +53,19 @@ const fallbackTypeData = [
   { name: 'Campaign', value: 32 },
 ];
 
+const fallbackActivityLogs: ActivityLog[] = [
+  { id: 'log_1', timestamp: 'Jul 22, 05:58 PM', recipient: 'tanishkgoswami527@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_2', timestamp: 'Jul 22, 05:54 PM', recipient: 'priyanshgour131@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_3', timestamp: 'Jul 22, 05:42 PM', recipient: 'callmetanishk@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_4', timestamp: 'Jul 22, 05:41 PM', recipient: 'golumarmat209@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_5', timestamp: 'Jul 22, 05:41 PM', recipient: 'akshaysonawane0009@gaiml.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Bounced' },
+  { id: 'log_6', timestamp: 'Jul 22, 05:41 PM', recipient: 'rabarijagdish323@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_7', timestamp: 'Jul 22, 05:40 PM', recipient: 'crkadam404@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_8', timestamp: 'Jul 22, 05:40 PM', recipient: 'pradhangamers3@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_9', timestamp: 'Jul 22, 05:40 PM', recipient: 'yogeshpawarbhatu4157@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+  { id: 'log_10', timestamp: 'Jul 22, 05:40 PM', recipient: 'ramgolu65181@gmail.com', type: 'Campaign', provider: 'ZeptoMail (.IN API)', status: 'Delivered' },
+];
+
 const statusColors: Record<string, string> = {
   Delivered: '#24754E',
   Sent: '#0D4F3C',
@@ -166,13 +179,10 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
     };
   }, [jobs, logs]);
 
-  const filteredLogs = logs.filter((l) =>
+  const effectiveLogs = logs.length > 0 ? logs : fallbackActivityLogs;
+
+  const filteredLogs = effectiveLogs.filter((l) =>
     `${l.recipient} ${l.provider} ${l.type} ${l.status}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
-  const paginatedLogs = filteredLogs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
   );
 
   const displayMetrics = [
@@ -228,10 +238,6 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
             <span>System health</span>
             <strong>Telemetry online</strong>
           </div>
-          <button className="dashboard-refresh" onClick={onRefresh}>
-            <RefreshCw size={16} />
-            Refresh
-          </button>
         </div>
       </section>
 
@@ -434,10 +440,7 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                 type="text"
                 placeholder="Search mail, provider, status"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -454,14 +457,14 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {paginatedLogs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="dashboard-table-empty">
                       No logs found.
                     </td>
                   </tr>
                 ) : (
-                  paginatedLogs.map((log) => (
+                  filteredLogs.map((log) => (
                     <tr key={log.id}>
                       <td className="muted-cell">{log.timestamp}</td>
                       <td className="recipient-cell">{log.recipient}</td>
@@ -479,20 +482,6 @@ export const DashboardQueueMonitor: React.FC<DashboardProps> = ({
                 )}
               </tbody>
             </table>
-          </div>
-
-          <div className="dashboard-pagination">
-            <span>
-              Page {currentPage} of {totalPages}
-            </span>
-            <div>
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="btn-secondary">
-                Previous
-              </button>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="btn-secondary">
-                Next
-              </button>
-            </div>
           </div>
         </article>
       </section>

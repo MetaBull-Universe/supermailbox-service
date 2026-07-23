@@ -615,28 +615,57 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
       const { count: totalCampaigns } = await supabase.from('campaigns').select('*', { count: 'exact', head: true });
       const { data: recentJobs } = await supabase
         .from('email_jobs')
-        .select(`
-          id, type, provider, status, created_at, idempotency_key,
-          campaigns ( product_id, products ( code ) ),
-          contacts ( primary_email )
-        `)
+        .select('id, type, provider, status, created_at, idempotency_key')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(50);
 
-      const logs = (recentJobs || []).map((j: any) => {
-        const extractedEmail = j.contacts?.primary_email || extractEmailFromIdempotencyKey(j.idempotency_key) || 'unknown@recipient.com';
-        const projectCode = normalizeProjectCode(j.campaigns?.products?.code) !== 'unknown'
-          ? normalizeProjectCode(j.campaigns?.products?.code)
-          : extractProjectFromIdempotencyKey(j.idempotency_key);
+      let logs = (recentJobs || []).map((j: any) => {
+        const emailMatch = j.idempotency_key?.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        const extractedEmail = emailMatch ? emailMatch[1] : 'unknown@recipient.com';
+        const formattedTime = new Date(j.created_at).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
         return {
           id: j.id,
-          timestamp: new Date(j.created_at).toLocaleTimeString(),
+          timestamp: formattedTime,
           recipient: extractedEmail,
           type: j.type === 'campaign' ? 'Campaign' : 'Transactional',
-          provider: `${j.provider || 'ZeptoMail'}${projectCode !== 'unknown' ? ` (${projectCode})` : ''}`,
-          status: j.status === 'delivered' ? 'Delivered' : (j.status === 'failed' ? 'Failed' : 'Sent')
+          provider: j.provider || 'ZeptoMail (.IN API)',
+          status: j.status === 'sent' || j.status === 'delivered' ? 'Delivered' : (j.status === 'bounced' ? 'Bounced' : 'Failed')
         };
       });
+
+      if (logs.length === 0) {
+        const { data: webhookLogs } = await supabase
+          .from('webhook_logs')
+          .select('id, provider, raw_payload, received_at')
+          .order('received_at', { ascending: false })
+          .limit(10);
+
+        if (webhookLogs && webhookLogs.length > 0) {
+          logs = webhookLogs.flatMap((wl: any) => {
+            const records = Array.isArray(wl.raw_payload?.records)
+              ? wl.raw_payload.records
+              : Array.isArray(wl.raw_payload)
+              ? wl.raw_payload
+              : [wl.raw_payload];
+
+            return records.slice(0, 5).map((r: any, idx: number) => ({
+              id: `${wl.id}_${idx}`,
+              timestamp: new Date(r.processed_at || r.bounced_at || wl.received_at).toLocaleTimeString(),
+              recipient: r.email_address || r.email || r.recipient || 'contact@metabull.com',
+              type: 'Transactional',
+              provider: 'ZeptoMail (Metabull)',
+              status: r.bounce_type || r.bounced_at ? 'Bounced' : 'Delivered'
+            }));
+          });
+        }
+      }
 
       // Fetch aggregate stats
       const { count: totalSent } = await supabase.from('email_jobs').select('*', { count: 'exact', head: true }).in('status', ['sent', 'delivered']);

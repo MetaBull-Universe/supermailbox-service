@@ -242,35 +242,71 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
           <h2 style={{ color: '#ffffff' }}>Bounce and suppression reports</h2>
           <p style={{ color: 'rgba(255,255,255,0.85)' }}>Review soft bounces, hard bounces, and the contacts blocked from future sends.</p>
         </div>
+      </div>
+
+      <div className="reputation-tabs" aria-label="Reputation report views">
+        <div className="reputation-tab-group">
+          <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Overview</button>
+          <button className={activeTab === 'bounces' ? 'active' : ''} onClick={() => setActiveTab('bounces')}>Bounce reports</button>
+          <button className={activeTab === 'suppression' ? 'active' : ''} onClick={() => setActiveTab('suppression')}>Suppression list</button>
+        </div>
 
         <button onClick={() => setIsModalOpen(true)} className="btn-primary">
           <Plus size={16} /> Block Email
         </button>
       </div>
 
-      <div className="reputation-tabs" aria-label="Reputation report views">
-        <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Overview</button>
-        <button className={activeTab === 'bounces' ? 'active' : ''} onClick={() => setActiveTab('bounces')}>Bounce reports</button>
-        <button className={activeTab === 'suppression' ? 'active' : ''} onClick={() => setActiveTab('suppression')}>Suppression list</button>
-      </div>
-
       <div className="suppression-insight-grid" aria-label="Reputation summary">
-        <div className="suppression-insight-card featured">
+        <div
+          className={`suppression-insight-card featured ${activeTab !== 'suppression' && bounceFilter === 'all' ? 'active-filter' : ''}`}
+          style={{ cursor: 'pointer', outline: activeTab !== 'suppression' && bounceFilter === 'all' ? '2px solid var(--primary)' : 'none' }}
+          onClick={() => {
+            setBounceFilter('all');
+            if (activeTab === 'suppression') setActiveTab('bounces');
+          }}
+          title="Click to filter analytics for all bounces"
+        >
           <span><BarChart3 size={16} /> Total bounces</span>
           <strong>{bounceReports.length}</strong>
           <small>Hard and soft failures from ZeptoMail</small>
         </div>
-        <div className="suppression-insight-card warning">
+
+        <div
+          className={`suppression-insight-card warning ${activeTab !== 'suppression' && bounceFilter === 'hard' ? 'active-filter' : ''}`}
+          style={{ cursor: 'pointer', outline: activeTab !== 'suppression' && bounceFilter === 'hard' ? '2px solid #D96767' : 'none' }}
+          onClick={() => {
+            setBounceFilter('hard');
+            if (activeTab === 'suppression') setActiveTab('bounces');
+          }}
+          title="Click to filter analytics for HARD bounces only"
+        >
           <span><MailX size={16} /> Hard bounces</span>
           <strong>{hardBounces.length}</strong>
           <small>Permanent failures from bounce reports</small>
         </div>
-        <div className="suppression-insight-card">
+
+        <div
+          className={`suppression-insight-card ${activeTab !== 'suppression' && bounceFilter === 'soft' ? 'active-filter' : ''}`}
+          style={{ cursor: 'pointer', outline: activeTab !== 'suppression' && bounceFilter === 'soft' ? '2px solid #D99745' : 'none' }}
+          onClick={() => {
+            setBounceFilter('soft');
+            if (activeTab === 'suppression') setActiveTab('bounces');
+          }}
+          title="Click to filter analytics for SOFT bounces only"
+        >
           <span><TrendingDown size={16} /> Soft bounces</span>
           <strong>{softBounces.length}</strong>
           <small>Temporary delivery failures to watch</small>
         </div>
-        <div className="suppression-insight-card">
+
+        <div
+          className={`suppression-insight-card ${activeTab === 'suppression' ? 'active-filter' : ''}`}
+          style={{ cursor: 'pointer', outline: activeTab === 'suppression' ? '2px solid #1F6F5B' : 'none' }}
+          onClick={() => {
+            setActiveTab('suppression');
+          }}
+          title="Click to view suppression list"
+        >
           <span><Ban size={16} /> Suppressed</span>
           <strong>{suppressions.length}</strong>
           <small>{complaintCount} complaints, {manualCount + unsubscribeCount} manual or opt-out</small>
@@ -282,7 +318,13 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
           <div className="audience-tracker-header">
             <div>
               <span>Audience analysis</span>
-              <h3>Last 7 days bounce and suppression tracker</h3>
+              <h3>
+                {bounceFilter === 'hard'
+                  ? 'Last 7 days HARD bounce tracker'
+                  : bounceFilter === 'soft'
+                  ? 'Last 7 days SOFT bounce tracker'
+                  : 'Last 7 days bounce and suppression tracker'}
+              </h3>
             </div>
             <div className="audience-tracker-controls">
               <div className="bounce-type-toggle" aria-label="Bounce type filter">
@@ -306,25 +348,41 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
                   <XAxis dataKey="label" tickLine={false} axisLine={false} />
                   <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={34} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="total" stroke={BOUNCE_COLORS.total} strokeWidth={3} dot={false} />
-                  <Line type="monotone" dataKey="hard" stroke={BOUNCE_COLORS.hard} strokeWidth={2.6} dot={false} />
-                  <Line type="monotone" dataKey="soft" stroke={BOUNCE_COLORS.soft} strokeWidth={2.6} dot={false} />
-                  <Line type="monotone" dataKey="suppressed" stroke={BOUNCE_COLORS.suppressed} strokeWidth={2.6} dot={false} />
-                  <Line type="monotone" dataKey="complaint" stroke={BOUNCE_COLORS.complaint} strokeWidth={2.2} dot={false} />
-                  <Line type="monotone" dataKey="manual" stroke={BOUNCE_COLORS.manual} strokeWidth={2.2} dot={false} />
+                  {bounceFilter === 'all' && (
+                    <>
+                      <Line type="monotone" dataKey="total" stroke={BOUNCE_COLORS.total} strokeWidth={3} dot={false} name="Total Bounces" />
+                      <Line type="monotone" dataKey="hard" stroke={BOUNCE_COLORS.hard} strokeWidth={2.6} dot={false} name="Hard Bounces" />
+                      <Line type="monotone" dataKey="soft" stroke={BOUNCE_COLORS.soft} strokeWidth={2.6} dot={false} name="Soft Bounces" />
+                      <Line type="monotone" dataKey="suppressed" stroke={BOUNCE_COLORS.suppressed} strokeWidth={2.6} dot={false} name="Suppressed" />
+                      <Line type="monotone" dataKey="complaint" stroke={BOUNCE_COLORS.complaint} strokeWidth={2.2} dot={false} name="Complaints" />
+                      <Line type="monotone" dataKey="manual" stroke={BOUNCE_COLORS.manual} strokeWidth={2.2} dot={false} name="Manual" />
+                    </>
+                  )}
+                  {bounceFilter === 'hard' && (
+                    <Line type="monotone" dataKey="hard" stroke={BOUNCE_COLORS.hard} strokeWidth={3.5} dot={{ r: 4, fill: BOUNCE_COLORS.hard }} name="Hard Bounces" />
+                  )}
+                  {bounceFilter === 'soft' && (
+                    <Line type="monotone" dataKey="soft" stroke={BOUNCE_COLORS.soft} strokeWidth={3.5} dot={{ r: 4, fill: BOUNCE_COLORS.soft }} name="Soft Bounces" />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
               <span className="audience-month-label">{audienceTotals.month}</span>
             </div>
 
             <div className="audience-tracker-legend">
-              {audienceLegend.map((item) => (
-                <div key={item.key}>
-                  <span><b style={{ background: item.color }} /> {item.label}</span>
-                  <strong>{item.value}</strong>
-                  {item.suffix ? <em>{item.suffix}</em> : null}
-                </div>
-              ))}
+              {audienceLegend
+                .filter((item) => {
+                  if (bounceFilter === 'hard') return item.key === 'hard' || item.key === 'total';
+                  if (bounceFilter === 'soft') return item.key === 'soft' || item.key === 'total';
+                  return true;
+                })
+                .map((item) => (
+                  <div key={item.key}>
+                    <span><b style={{ background: item.color }} /> {item.label}</span>
+                    <strong>{item.value}</strong>
+                    {item.suffix ? <em>{item.suffix}</em> : null}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
@@ -490,35 +548,22 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
       )}
 
       {isModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'color-mix(in srgb, var(--ink) 24%, transparent)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            className="glass-panel"
-            style={{
-              width: '400px',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              boxShadow: 'var(--shadow-dropdown)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-main)' }}>Block Email Address</h3>
-            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="suppression-details-card" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <button
+              className="suppression-details-close"
+              onClick={() => setIsModalOpen(false)}
+              aria-label="Close dialog"
+            >
+              <X size={16} />
+            </button>
+
+            <h3 className="suppression-details-title">Block Email Address</h3>
+
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
-                  Email Address
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  Target Email Address
                 </label>
                 <input
                   type="email"
@@ -527,22 +572,34 @@ export const SuppressionManager: React.FC<SuppressionProps> = ({
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="ui-input"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)' }}
                 />
               </div>
 
-              <label>
-                Reason
-                <select value={newReason} onChange={(e) => setNewReason(e.target.value as SuppressionItem['reason'])} className="ui-input">
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  Reason & Category
+                </label>
+                <select
+                  value={newReason}
+                  onChange={(e) => setNewReason(e.target.value as SuppressionItem['reason'])}
+                  className="ui-input"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                >
                   <option value="manual">Manual Admin Block</option>
                   <option value="unsubscribe">User Unsubscribed</option>
                   <option value="complaint">Spam Complaint</option>
                   <option value="bounce">Hard Bounce</option>
                 </select>
-              </label>
+              </div>
 
-              <div>
-                <button type="submit" className="btn-primary">Block</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary" style={{ padding: '8px 18px', borderRadius: '6px' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" style={{ padding: '8px 22px', borderRadius: '6px' }}>
+                  Block Email
+                </button>
               </div>
             </form>
           </div>
